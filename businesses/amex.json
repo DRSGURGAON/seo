@@ -1,0 +1,18 @@
+{
+  "id": "amex",
+  "name": "American Express Packers and Movers",
+  "website": "https://americanpackersncr.in/",
+  "phone": "+919008590012",
+  "whatsapp": "919008590012",
+  "email": "americanpackersncr@gmail.com",
+  "address": "134, I Block, Old Choma Road, New Palam Vihar, Sector 110, Gurgaon, Haryana 122017",
+  "established": 2016,
+  "gbp_profile_url": "https://share.google/rqyJVTqpjHoKiw0Pw",
+  "instagram": "https://www.instagram.com/packersmoversingurgaon/",
+  "primary_keyword": "best packers in Gurgaon",
+  "secondary_keyword": "best movers in Gurgaon",
+  "services": ["house shifting", "office relocation", "car and bike transport", "storage and warehousing", "transit insurance", "defence relocation"],
+  "areas": ["Sector 110", "New Palam Vihar", "Sector 56", "Sector 49", "Sector 37", "DLF", "Dwarka Expressway", "Sohna Road", "Golf Course Road", "Sushant Lok", "Cyber City", "Udyog Vihar", "Manesar", "Delhi", "Noida"],
+  "post_rules": { "min_chars": 700, "max_chars": 1000, "length_tolerance": 10, "max_similarity": 0.5, "time": "11:00", "tz": "Asia/Kolkata", "cta": "call" },
+  "widget": { "heading": "Live Updates", "city": "Gurgaon", "accent": "#9b1c2c", "cols": 4, "limit": 8 }
+}
