@@ -30,12 +30,37 @@ export function dayAfter(iso) {
   return d.toISOString().slice(0, 10);
 }
 
-// Continue the photo rotation after the last photo used by existing posts.
+export const isOffer = p => p.type === 'offer';
+
+// Continue the photo rotation after the last photo used by existing daily posts (offer posts don't count).
 export function pickPhotos(photos, existing, count) {
   if (!photos.length) return Array(count).fill('');
-  const lastUrl = existing.length ? existing[existing.length - 1].image : '';
+  const daily = existing.filter(p => !isOffer(p));
+  const lastUrl = daily.length ? daily[daily.length - 1].image : '';
   const start = (photos.findIndex(p => p.url === lastUrl || p.id === lastUrl) + 1) % photos.length;
   return Array.from({ length: count }, (_, i) => photos[(start + i) % photos.length].id);
+}
+
+// A different posting time for every date (HH:MM), spread over `window` ("09:00-19:00"), never on :00 or :30,
+// never the same time twice in one batch. Same dates + seed always give the same times, so re-runs are stable.
+// window "fixed" (or no window) means every post uses `fallback` (the business's post_time).
+export const DEFAULT_TIME_WINDOW = '09:00-19:00';
+export function pickTimes(dates, { window = DEFAULT_TIME_WINDOW, seed = '', fallback = '11:00', avoid = [] } = {}) {
+  const m = String(window || '').match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+  if (!m) return dates.map(() => fallback);
+  const lo = +m[1] * 60 + +m[2], hi = +m[3] * 60 + +m[4], span = hi - lo + 1;
+  if (span < dates.length * 2) return dates.map(() => fallback);
+  const toMin = t => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; };
+  const used = new Set(avoid.map(toMin));
+  const ok = x => x % 30 !== 0 && !used.has(x);
+  return dates.map(d => {
+    let h = 2166136261;
+    for (const c of `${seed}|${d}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+    let x = lo + (h % span);
+    for (let i = 0; i < span && !ok(x); i++) x = lo + ((x - lo + 7) % span);
+    used.add(x);
+    return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+  });
 }
 
 // Problems with one post: length, keyword, phone number, similarity to `others`.
@@ -107,9 +132,13 @@ export async function generateMonth({ biz, existing, photos, dates, generate, ba
     log(`  request ${call + 1}: ${got}/${count} accepted${fixes.length ? `, ${fixes.length} sent back to rewrite` : ''}`);
   }
   const imgs = pickPhotos(photos, existing, accepted.length);
+  const r = biz.post_rules;
+  const times = pickTimes(dates.slice(0, accepted.length), {
+    window: r.time_window === 'fixed' ? '' : (r.time_window || DEFAULT_TIME_WINDOW), seed: biz.id, fallback: r.time,
+  });
   return accepted.map((p, i) => ({
     id: `${biz.id}-${dates[i].replace(/-/g, '')}`,
-    date: dates[i], time: biz.post_rules.time, title: p.title.trim(), text: p.text.trim(),
+    date: dates[i], time: times[i], title: p.title.trim(), text: p.text.trim(),
     image: imgs[i], cta: biz.post_rules.cta, status: 'scheduled',
     chars: `${p.title} ${p.text}`.length, notes: `gemini: ${p.topic}`,
   }));

@@ -50,3 +50,21 @@ test('inactive rows are skipped and missing fields are named', async () => {
   assert.deepEqual(businesses.map(b => b.biz.id), ['amex']);
   assert.match(errors[0], /\(sw\): fill phone, primary_keyword/);
 });
+
+test('offer rows keep type and dates, share a day with a daily post, and bad offers are reported', async () => {
+  const wb = buildTemplate([{ biz, feed: { posts: feed.posts.slice(0, 1) } }]);
+  const ws = wb.getWorksheet(postsTab('amex'));
+  const day = feed.posts[0].date.slice(0, 10);
+  ws.addRow({ date: day, time: '16:20', title: 'Offer', text: 'Ten percent off', type: 'offer', offer_start: '2026-11-16', offer_end: '25/11/2026' });
+  ws.addRow({ date: day, time: '17:10', title: 'Bad', text: 'No end date', type: 'offer' });
+  ws.addRow({ date: day, time: '17:20', title: 'Bad', text: 'Odd type', type: 'promo' });
+  const { businesses, errors } = parseWorkbook(await roundTrip(wb));
+  assert.equal(errors.length, 2);
+  assert.match(errors.join('\n'), /offer_end/);
+  assert.match(errors.join('\n'), /must be post or offer/);
+  const posts = businesses[0].posts;
+  assert.equal(posts.length, 2);
+  const offer = posts.find(p => p.type === 'offer');
+  assert.deepEqual([offer.offer_start, offer.offer_end, offer.id], ['2026-11-16', '2026-11-25', `amex-offer-${day.replace(/-/g, '')}`]);
+  assert.equal(posts.find(p => p.type !== 'offer').type, undefined);
+});

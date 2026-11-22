@@ -41,6 +41,12 @@ Writes `out/<id>/<YYYY-MM>.posts.csv` (git-ignored): one post per day from the d
 
 Without a computer: add the key as a repository secret (Settings > Secrets and variables > Actions > `GEMINI_API_KEY`), then Actions > "Generate month of GBP posts" > Run workflow, and download the CSV from the run's Artifacts. If Google retires the model, set a repository variable `GEMINI_MODEL` (same page, Variables tab) to the new name; no code change needed.
 
+## Posting times and offer posts
+
+- Each generated post gets its own time between 09:00 and 19:00 (never on :00 or :30, never twice in a month). Change the range with a `post_time_window` column in the Businesses tab (e.g. `10:00-18:00`), or set it to `fixed` to put every post at `post_time`. A `time` typed in the posts tab always wins.
+- Offer posts go in the same `<id>_posts` tab with `type = offer` and `offer_end` (and `offer_start` if the offer began before the post date). They follow the same checks as daily posts, can share a day with a daily post at a different time, and do not shift the month generator's dates or photo rotation. On the website they show an "Offer till ..." badge and disappear after `offer_end`. Put the offer terms in `notes` for the Localo Offer post.
+- `out/amex/offers-2026-11-to-2027-03.csv`: AmEx "10% off local shifting" offers (2-7 and 16-25 of each month, Nov 2026 - Mar 2027), ready to import into `amex_posts` below the existing rows. Fill `image` with a photo_id first.
+
 ## Everything from the Actions tab (no computer needed)
 
 1. Repository variable `GBP_SHEET_ID` = the sheet URL or ID (Settings > Secrets and variables > Actions > Variables). Secret `GEMINI_API_KEY` as above.

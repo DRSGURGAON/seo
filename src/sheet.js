@@ -7,11 +7,12 @@ export const BIZ_TAB = 'Businesses', PHOTO_TAB = 'Photos', postsTab = id => `${i
 // [column, how to read it]. Lists are comma-separated in one cell.
 export const BIZ_COLUMNS = [
   'active', 'id', 'name', 'website', 'phone', 'whatsapp', 'email', 'address', 'established', 'gbp_profile_url', 'instagram',
-  'primary_keyword', 'secondary_keyword', 'services', 'areas', 'post_time', 'timezone', 'cta', 'min_chars', 'max_chars',
+  'primary_keyword', 'secondary_keyword', 'services', 'areas', 'post_time', 'post_time_window', 'timezone', 'cta', 'min_chars', 'max_chars',
   'length_tolerance', 'max_similarity', 'widget_heading', 'widget_city', 'widget_accent', 'widget_cols', 'widget_limit',
   'whatsapp_text', 'directions_url', 'localo_location',
 ];
-export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes'];
+export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes', 'type', 'offer_start', 'offer_end'];
+export const POST_TYPES = ['post', 'offer'];
 export const PHOTO_COLUMNS = ['business_id', 'photo_id', 'url', 'alt', 'last_used'];
 const REQUIRED_BIZ = ['id', 'name', 'phone', 'primary_keyword', 'secondary_keyword', 'min_chars', 'max_chars', 'max_similarity'];
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -85,7 +86,7 @@ export function bizFromRow(d) {
     primary_keyword: t('primary_keyword'), secondary_keyword: t('secondary_keyword'), services: list(d.services), areas: list(d.areas),
     post_rules: {
       min_chars: num(d.min_chars), max_chars: num(d.max_chars), length_tolerance: num(d.length_tolerance, 0), max_similarity: num(d.max_similarity, 0.5),
-      time: parseTime(d.post_time) || '11:00', tz: t('timezone') || 'Asia/Kolkata', cta: t('cta') || 'call',
+      time: parseTime(d.post_time) || '11:00', ...(t('post_time_window') ? { time_window: t('post_time_window') } : {}), tz: t('timezone') || 'Asia/Kolkata', cta: t('cta') || 'call',
     },
     widget: {
       heading: t('widget_heading') || 'Live Updates', city: t('widget_city'), accent: t('widget_accent'),
@@ -151,12 +152,21 @@ export function parseWorkbook(wb) {
       if (!date) { errors.push(`${at}: date "${cellText(p.date)}" not understood (use 2026-12-25 or 25/12/2026)`); continue; }
       if (!time) { errors.push(`${at}: time "${cellText(p.time)}" not understood (use 11:00)`); continue; }
       if (!title || !text) { errors.push(`${at}: title and text are required`); continue; }
-      const id = cellText(p.id) || `${biz.id}-${date.replace(/-/g, '')}`;
+      const type = cellText(p.type).toLowerCase() || 'post';
+      if (!POST_TYPES.includes(type)) { errors.push(`${at}: type "${type}" must be post or offer`); continue; }
+      let offer = {};
+      if (type === 'offer') {
+        const end = parseDate(p.offer_end), start = cellText(p.offer_start) ? parseDate(p.offer_start) : date;
+        if (!end || !start) { errors.push(`${at}: offer needs offer_end (and offer_start if filled) as 2026-12-25 or 25/12/2026`); continue; }
+        if (end < start || end < date) { errors.push(`${at}: offer_end ${end} is before the start or the post date`); continue; }
+        offer = { type, offer_start: start, offer_end: end };
+      }
+      const id = cellText(p.id) || `${biz.id}-${type === 'offer' ? 'offer-' : ''}${date.replace(/-/g, '')}`;
       if (ids.has(id)) { errors.push(`${at}: id "${id}" used twice`); continue; }
       ids.add(id);
       const img = cellText(p.image);
       if (img && !photoUrl[img] && !/^(https?:)?\/\//.test(img) && !img.startsWith('/')) warnings.push(`${at}: image "${img}" is not a photo_id in ${PHOTO_TAB} or a URL`);
-      posts.push({ id, date: `${date}T${time}:00${tzOffset(biz.post_rules.tz, date)}`, title, text, image: photoUrl[img] || img, cta: cellText(p.cta) || biz.post_rules.cta });
+      posts.push({ id, date: `${date}T${time}:00${tzOffset(biz.post_rules.tz, date)}`, title, text, image: photoUrl[img] || img, cta: cellText(p.cta) || biz.post_rules.cta, ...offer });
     }
     posts.sort((a, b) => a.date.localeCompare(b.date));
     if (drafts) warnings.push(`${biz.id}: ${drafts} draft row(s) left out`);
@@ -195,7 +205,7 @@ export function bizToRow(biz, header = {}) {
     active: biz.active === false ? 'no' : 'yes', id: biz.id, name: biz.name, website: biz.website, phone: biz.phone, whatsapp: biz.whatsapp, email: biz.email,
     address: biz.address, established: biz.established, gbp_profile_url: biz.gbp_profile_url, instagram: biz.instagram,
     primary_keyword: biz.primary_keyword, secondary_keyword: biz.secondary_keyword, services: (biz.services || []).join(', '), areas: (biz.areas || []).join(', '),
-    post_time: r.time, timezone: r.tz, cta: r.cta, min_chars: r.min_chars, max_chars: r.max_chars, length_tolerance: r.length_tolerance, max_similarity: r.max_similarity,
+    post_time: r.time, post_time_window: r.time_window || '', timezone: r.tz, cta: r.cta, min_chars: r.min_chars, max_chars: r.max_chars, length_tolerance: r.length_tolerance, max_similarity: r.max_similarity,
     widget_heading: w.heading, widget_city: w.city, widget_accent: w.accent, widget_cols: w.cols, widget_limit: w.limit,
     whatsapp_text: biz.whatsapp_text ?? (wa && new URL(wa.url).searchParams.get('text')) ?? '',
     directions_url: biz.directions_url ?? dir?.url ?? '', localo_location: biz.localo_location || '',
@@ -211,9 +221,13 @@ export function buildTemplate(profiles) {
     'GBP Posts sheet - yahi sheet master hai. Yahan badlo, phir terminal me: npm run sync',
     '',
     'Businesses: har company/profile ki ek row. active = no karo to wo profile skip hoga.',
+    '   post_time_window (jaise 09:00-19:00): month generator har post ko is beech alag time deta hai. fixed = sab post_time par.',
     '   services aur areas comma se alag likho. Sab columns ke naam mat badlo.',
     '<id>_posts: har company ka alag tab (jaise amex_posts). Ek row = ek post.',
     '   date: 2026-12-25 ya 25/12/2026. time khali = Businesses wala post_time.',
+    '   Ek din me 2 post (jaise offer + daily) ho sakte hain, bas time alag ho.',
+    '   type: khali/post = roz wala post. offer = offer post: offer_end bharo (offer_start khali = post ki date).',
+    '   Website par offer post offer_end ke baad apne aap chhup jata hai.',
     '   status: draft = website/Localo me nahi jayega. scheduled / posted = jayega.',
     '   image: Photos tab ka photo_id (jaise p01) ya poora URL.',
     '   chars: apne aap ginta hai (title + text). Laal ho to length theek karo.',
@@ -234,7 +248,8 @@ export function buildTemplate(profiles) {
     const ids = new Map();
     (feed?.posts || []).forEach(p => {
       if (p.image && !ids.has(p.image)) ids.set(p.image, `p${pad(ids.size + 1)}`);
-      ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: ids.get(p.image) || '', cta: p.cta, status: 'scheduled' });
+      ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: ids.get(p.image) || '', cta: p.cta, status: 'scheduled',
+        type: p.type || '', offer_start: p.offer_start || '', offer_end: p.offer_end || '' });
     });
     for (const [url, id] of ids) photoRows.push({ business_id: biz.id, photo_id: id, url, alt: '', last_used: '' });
 
@@ -242,6 +257,7 @@ export function buildTemplate(profiles) {
     for (let i = 2; i <= last; i++) ws.getCell(`I${i}`).value = { formula: `IF(E${i}="","",LEN(D${i})+1+LEN(E${i}))` };
     ws.getColumn('text').alignment = { wrapText: true, vertical: 'top' };
     ws.dataValidations.add(`H2:H${last}`, { type: 'list', allowBlank: true, formulae: ['"draft,scheduled,posted"'] });
+    ws.dataValidations.add(`K2:K${last}`, { type: 'list', allowBlank: true, formulae: ['"post,offer"'] });
     ws.dataValidations.add(`G2:G${last}`, { type: 'list', allowBlank: true, formulae: ['"call,whatsapp,directions,review"'] });
     if (r.min_chars) ws.addConditionalFormatting({ ref: `I2:I${last}`, rules: [{ type: 'expression', priority: 1,
       formulae: [`AND(I2<>"",OR(I2<${r.min_chars - tol},I2>${r.max_chars + tol}))`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF4CCCC' } } } }] });

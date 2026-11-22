@@ -5,7 +5,7 @@
 // CSV there, review, then `npm run sync`.
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { geminiJson } from '../src/gemini.js';
-import { generateMonth, monthDates, dayAfter, POST_SCHEMA, toCsv, toSummary } from '../src/month.js';
+import { generateMonth, monthDates, dayAfter, isOffer, POST_SCHEMA, toCsv, toSummary } from '../src/month.js';
 import { POST_COLUMNS } from '../src/sheet.js';
 
 const args = process.argv.slice(2);
@@ -21,7 +21,9 @@ async function main() {
   const biz = JSON.parse(readFileSync(`businesses/${id}.json`, 'utf8'));
   const existing = existsSync(`out/${id}/posts.json`) ? JSON.parse(readFileSync(`out/${id}/posts.json`, 'utf8')).posts : [];
   const photos = existsSync(`out/${id}/photos.json`) ? JSON.parse(readFileSync(`out/${id}/photos.json`, 'utf8')) : [];
-  const lastDate = existing.length ? existing[existing.length - 1].date.slice(0, 10) : null;
+  // Offer posts are extra posts on top of the daily ones, so they don't move the "next day to fill".
+  const daily = existing.filter(p => !isOffer(p));
+  const lastDate = daily.length ? daily[daily.length - 1].date.slice(0, 10) : null;
   const from = fromArg || (lastDate && lastDate.slice(0, 7) >= month ? dayAfter(lastDate) : null);
   const dates = monthDates(month, from);
   if (!dates.length) { console.log(`${id}: ${month} already covered (last post ${lastDate}). Nothing to do.`); return; }

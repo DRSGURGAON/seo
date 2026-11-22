@@ -81,3 +81,33 @@ test('buildPrompt tells Gemini the publish month and season, and forbids invente
   assert.match(seasonFor('2027-04'), /summer/);
   assert.match(seasonFor('2026-10'), /festive/);
 });
+
+test('pickTimes gives every date its own time inside the window, never :00 or :30, and is stable', async () => {
+  const { pickTimes } = await import('../src/month.js');
+  const dates = monthDates('2027-01');
+  const t = pickTimes(dates, { window: '09:00-19:00', seed: 'amex' });
+  assert.equal(new Set(t).size, dates.length);
+  for (const x of t) {
+    assert.ok(x >= '09:00' && x <= '19:00', x);
+    assert.ok(!/:(00|30)$/.test(x), x);
+  }
+  assert.deepEqual(pickTimes(dates, { seed: 'amex' }), t);
+  assert.deepEqual(pickTimes(['2027-01-01'], { window: '', fallback: '11:00' }), ['11:00']);
+  assert.ok(!pickTimes(['2027-01-01'], { avoid: t.slice(0, 1), seed: 'amex' }).includes(t[0]));
+});
+
+test('generateMonth uses varied times unless the window is "fixed"', async () => {
+  const dates = ['2027-01-01', '2027-01-02', '2027-01-03'];
+  const generate = async () => [good(), good(), good()];
+  const rows = await generateMonth({ biz, existing: [], photos: [], dates, generate });
+  assert.equal(new Set(rows.map(r => r.time)).size, 3);
+  assert.ok(!rows.some(r => r.time === '11:00'));
+  const fixed = { ...biz, post_rules: { ...biz.post_rules, time_window: 'fixed' } };
+  const rows2 = await generateMonth({ biz: fixed, existing: [], photos: [], dates, generate });
+  assert.deepEqual(rows2.map(r => r.time), ['11:00', '11:00', '11:00']);
+});
+
+test('offer posts do not move the photo rotation', () => {
+  const photos = [{ id: 'p1', url: 'u1' }, { id: 'p2', url: 'u2' }, { id: 'p3', url: 'u3' }];
+  assert.deepEqual(pickPhotos(photos, [{ image: 'u1' }, { image: 'u3', type: 'offer' }], 1), ['p2']);
+});
