@@ -103,3 +103,18 @@ export function toCsv(rows, columns) {
   const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   return [columns.join(','), ...rows.map(r => columns.map(c => esc(r[c])).join(','))].join('\n') + '\n';
 }
+
+// Markdown table for the GitHub Actions run page, so posts can be read without downloading anything.
+export function toSummary(rows, { id, month }) {
+  const cell = s => String(s ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
+  return [
+    `## ${id} ${month}: ${rows.length} posts`,
+    '',
+    'Read each post, then import the CSV (Artifacts, below) into the sheet.',
+    '',
+    '| Date | Title | Text | Chars |',
+    '|---|---|---|---|',
+    ...rows.map(r => `| ${r.date} | ${cell(r.title)} | ${cell(r.text)} | ${r.chars} |`),
+    '',
+  ].join('\n');
+}

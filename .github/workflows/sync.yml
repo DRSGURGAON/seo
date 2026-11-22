@@ -1,0 +1,43 @@
+# Actions tab > "Sync posts from Google Sheet" > Run workflow.
+# Reads the sheet (repository variable GBP_SHEET_ID), rebuilds businesses/*.json and out/*/posts.json,
+# and commits them only if every post passes `checkPosts`. The website widget reads out/<id>/posts.json
+# from main, so the site updates by itself a few minutes later.
+name: Sync posts from Google Sheet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sheet-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sync from the sheet (stops here if any post fails the checks)
+        env:
+          GBP_SHEET_ID: ${{ vars.GBP_SHEET_ID }}
+        run: npm run sync
+      - name: Commit changes
+        run: |
+          git add businesses out
+          if git diff --cached --quiet; then
+            echo "Sheet and repo already match, nothing to commit." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat | tee -a "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Sync posts from Google Sheet"
+          git push

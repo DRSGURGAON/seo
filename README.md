@@ -40,3 +40,9 @@ npm run month -- amex 2026-12 --from 2026-12-22
 Writes `out/<id>/<YYYY-MM>.posts.csv` (git-ignored): one post per day from the day after the last existing post, each checked for length, both keywords, no phone numbers and similarity < `max_similarity` against all earlier posts; failures are sent back to Gemini with the reason. Photos continue the pool rotation. Import the CSV into the `<id>_posts` tab, review, then `npm run sync`.
 
 Without a computer: add the key as a repository secret (Settings > Secrets and variables > Actions > `GEMINI_API_KEY`), then Actions > "Generate month of GBP posts" > Run workflow, and download the CSV from the run's Artifacts. If Google retires the model, set a repository variable `GEMINI_MODEL` (same page, Variables tab) to the new name; no code change needed.
+
+## Everything from the Actions tab (no computer needed)
+
+1. Repository variable `GBP_SHEET_ID` = the sheet URL or ID (Settings > Secrets and variables > Actions > Variables). Secret `GEMINI_API_KEY` as above.
+2. **Generate month of GBP posts**: the posts appear as a table on the run's Summary page; the CSV is under Artifacts.
+3. Import the CSV into the `<id>_posts` tab, review, then run **Sync posts from Google Sheet**: it commits `out/<id>/posts.json` only if every post passes the checks, and the website widget picks it up from `main`.
