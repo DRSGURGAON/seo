@@ -17,6 +17,10 @@ Generate unique SEO Google Business Profile posts per business, one per day, and
 ## Layout
 businesses/<id>.json config - src/ engine - scripts/ CLI - widget/ website widget - out/<id>/ generated posts.json - docs/ notes.
 
+## Google Sheet is the source of truth
+Pradeep edits one Google Sheet (tabs: Businesses, <id>_posts per profile, Photos); `npm run sync` (src/sheet.js, scripts/sync.js) rebuilds businesses/<id>.json, out/<id>/posts.json and out/<id>/photos.json from it. Do not hand-edit those JSON files, change the sheet (or the generator that fills it). Sheet ID is in `.env` as GBP_SHEET_ID; the sheet is link-shared, so no customer data in it. `npm run sheet:export` rebuilds an .xlsx from the JSON (first upload only).
+
 ## Status (2026-11-21)
 AmEx: 30 posts scheduled in Localo 22 Nov - 21 Dec at 11:00 IST, `out/amex/posts.json` is the same set. Photo URLs in it are Localo-hosted (test only); replace with the site's own /gbp/img/*.
-Next: month generator (Gemini) + topic engine, DRS and StorageWale configs, Drive photo pool, Localo publish script.
+Google Sheet sync added 2026-11-21 (DRS, StorageWale rows in the sheet with active = no, to be filled).
+Next: month generator (Gemini) writing into the sheet + topic engine, DRS and StorageWale details, Drive photo pool, Localo publish script.

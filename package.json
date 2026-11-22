@@ -5,6 +5,11 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/check.js amex",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "sync": "node scripts/sync.js",
+    "sheet:export": "node scripts/sheet-export.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
   }
 }
