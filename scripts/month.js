@@ -3,9 +3,9 @@
 //        npm run month -- amex 2026-12 --from 2026-12-22
 // Writes out/<id>/<YYYY-MM>.posts.csv (gitignored). The sheet stays the source of truth: import the
 // CSV there, review, then `npm run sync`.
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { geminiJson } from '../src/gemini.js';
-import { generateMonth, monthDates, dayAfter, POST_SCHEMA, toCsv } from '../src/month.js';
+import { generateMonth, monthDates, dayAfter, POST_SCHEMA, toCsv, toSummary } from '../src/month.js';
 import { POST_COLUMNS } from '../src/sheet.js';
 
 const args = process.argv.slice(2);
@@ -35,6 +35,8 @@ async function main() {
   const file = `out/${id}/${month}.posts.csv`;
   writeFileSync(file, toCsv(rows, POST_COLUMNS));
   console.log(`\n${rows.length}/${dates.length} posts passed the checks -> ${file}`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, toSummary(rows, { id, month }));
+  if (process.env.GITHUB_ACTIONS) console.log(`::group::Posts JSON\n${JSON.stringify(rows)}\n::endgroup::`);
   if (rows.length < dates.length) {
     console.log(`${dates.length - rows.length} day(s) still empty after retries: run again with --from ${dates[rows.length]}`);
     process.exitCode = 1;

@@ -62,3 +62,22 @@ test('generateMonth gives up after the retry budget instead of looping forever',
 test('toCsv quotes commas, quotes and newlines', () => {
   assert.equal(toCsv([{ a: 'x,y', b: 'say "hi"\nok' }], ['a', 'b']), 'a,b\n"x,y","say ""hi""\nok"\n');
 });
+
+test('toSummary renders a readable table and escapes pipes and newlines', async () => {
+  const { toSummary } = await import('../src/month.js');
+  const md = toSummary([{ date: '2026-12-22', title: 'A | B', text: 'line one\nline two', chars: 712 }], { id: 'amex', month: '2026-12' });
+  assert.match(md, /## amex 2026-12: 1 posts/);
+  assert.match(md, /\| 2026-12-22 \| A \\\| B \| line one line two \| 712 \|/);
+});
+
+test('buildPrompt tells Gemini the publish month and season, and forbids invented claims', async () => {
+  const { buildPrompt, seasonFor } = await import('../src/month.js');
+  const p = buildPrompt(biz, { count: 2, avoidTitles: [], month: '2026-12' });
+  assert.match(p, /December 2026/);
+  assert.match(p, /winter/);
+  assert.match(p, /only in a post that is about insurance/);
+  assert.match(p, /never included/);
+  assert.match(seasonFor('2027-07'), /monsoon/);
+  assert.match(seasonFor('2027-04'), /summer/);
+  assert.match(seasonFor('2026-10'), /festive/);
+});
