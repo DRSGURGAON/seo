@@ -7,7 +7,8 @@
     "check": "node scripts/check.js amex",
     "test": "node --test tests/*.test.js",
     "sync": "node scripts/sync.js",
-    "sheet:export": "node scripts/sheet-export.js"
+    "sheet:export": "node scripts/sheet-export.js",
+    "month": "node scripts/month.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0"

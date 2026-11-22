@@ -6,3 +6,4 @@ node_modules/
 *.xlsx
 sheet/
 !.env.example
+out/*/*.posts.csv

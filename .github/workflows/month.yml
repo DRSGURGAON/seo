@@ -1,0 +1,49 @@
+# Actions tab > "Generate month of GBP posts" > Run workflow. Needs the GEMINI_API_KEY repository secret.
+# The CSV is attached to the run as an artifact (not committed): import it into the <id>_posts tab of
+# the Google Sheet, review, then `npm run sync`.
+name: Generate month of GBP posts
+
+on:
+  workflow_dispatch:
+    inputs:
+      business:
+        description: Business id (file name in businesses/)
+        default: amex
+        required: true
+      month:
+        description: Month to fill, YYYY-MM (e.g. 2027-01)
+        required: true
+      from:
+        description: Optional first date YYYY-MM-DD (default = day after the last existing post)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate posts with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BUSINESS: ${{ inputs.business }}
+          MONTH: ${{ inputs.month }}
+          FROM: ${{ inputs.from }}
+        run: |
+          set -- "$BUSINESS" "$MONTH"
+          if [ -n "$FROM" ]; then set -- "$@" --from "$FROM"; fi
+          npm run month -- "$@"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.business }}-${{ inputs.month }}-posts
+          path: out/${{ inputs.business }}/*.posts.csv
+          if-no-files-found: warn

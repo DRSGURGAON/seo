@@ -23,4 +23,5 @@ Pradeep edits one Google Sheet (tabs: Businesses, <id>_posts per profile, Photos
 ## Status (2026-11-21)
 AmEx: 30 posts scheduled in Localo 22 Nov - 21 Dec at 11:00 IST, `out/amex/posts.json` is the same set. Photo URLs in it are Localo-hosted (test only); replace with the site's own /gbp/img/*.
 Google Sheet sync added 2026-11-21 (DRS, StorageWale rows in the sheet with active = no, to be filled).
-Next: month generator (Gemini) writing into the sheet + topic engine, DRS and StorageWale details, Drive photo pool, Localo publish script.
+Month generator done: `npm run month -- <id> <YYYY-MM>` (src/month.js, src/gemini.js) and the "Generate month of GBP posts" Action write a CSV for the sheet; key = GEMINI_API_KEY (.env locally, repo secret in Actions).
+Next: topic engine, DRS and StorageWale details, Drive photo pool, Localo publish script.
