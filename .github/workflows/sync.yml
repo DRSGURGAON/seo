@@ -1,5 +1,5 @@
 # Actions tab > "Sync posts from Google Sheet" > Run workflow.
-# Reads the sheet (repository variable GBP_SHEET_ID), rebuilds businesses/*.json and out/*/posts.json,
+# Reads the sheet (GBP_SHEET_ID as a repository variable or secret), rebuilds businesses/*.json and out/*/posts.json,
 # and commits them only if every post passes `checkPosts`. The website widget reads out/<id>/posts.json
 # from main, so the site updates by itself a few minutes later.
 name: Sync posts from Google Sheet
@@ -27,7 +27,7 @@ jobs:
       - run: npm ci
       - name: Sync from the sheet (stops here if any post fails the checks)
         env:
-          GBP_SHEET_ID: ${{ vars.GBP_SHEET_ID }}
+          GBP_SHEET_ID: ${{ vars.GBP_SHEET_ID || secrets.GBP_SHEET_ID }}
         run: npm run sync
       - name: Commit changes
         run: |
