@@ -13,7 +13,7 @@ const [id, month] = args.filter(a => !a.startsWith('--') && !/^\d{4}-\d{2}-\d{2}
 const fromArg = args.includes('--from') ? args[args.indexOf('--from') + 1] : null;
 try { process.loadEnvFile('.env'); } catch {}
 const apiKey = process.env.GEMINI_API_KEY;
-const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 async function main() {
   if (!id || !/^\d{4}-\d{2}$/.test(month || '')) { console.error('Usage: npm run month -- <id> <YYYY-MM> [--from YYYY-MM-DD]'); process.exitCode = 1; return; }
