@@ -1,0 +1,68 @@
+# Actions tab > "Generate AI photos" > Run workflow. Needs the GEMINI_API_KEY secret and GBP_SHEET_ID.
+# Draws a photo for each upcoming post without one, commits the photos to photos/ai/ on main (so the
+# sheet can preview them) and out/<id>/photo-review.csv. Import that CSV into the AI_Photos tab (Append),
+# approve or reject each photo, then run "Sync posts from Google Sheet".
+name: Generate AI photos
+
+on:
+  workflow_dispatch:
+    inputs:
+      business:
+        description: Business id
+        default: amex
+        required: true
+      only:
+        description: Which posts (offer / post / all)
+        default: offer
+        required: true
+        type: choice
+        options: [offer, post, all]
+      limit:
+        description: Max photos this run
+        default: '10'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sheet-sync
+  cancel-in-progress: false
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Draw photos with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Optional repository variable to switch the image model without a code change.
+          GEMINI_IMAGE_MODEL: ${{ vars.GEMINI_IMAGE_MODEL }}
+          GBP_SHEET_ID: ${{ vars.GBP_SHEET_ID || secrets.GBP_SHEET_ID }}
+          BUSINESS: ${{ inputs.business }}
+          ONLY: ${{ inputs.only }}
+          LIMIT: ${{ inputs.limit }}
+        run: npm run photos -- "$BUSINESS" --only "$ONLY" --limit "$LIMIT"
+      - name: Commit photos
+        if: always()
+        run: |
+          git add photos out/*/photo-review.csv 2>/dev/null || true
+          if git diff --cached --quiet; then echo "No new photos."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "AI photos for review"
+          git pull --rebase
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.business }}-photo-review
+          path: out/${{ inputs.business }}/photo-review.csv
+          if-no-files-found: warn

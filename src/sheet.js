@@ -1,6 +1,7 @@
 // Google Sheet <-> JSON. The sheet is the source of truth; businesses/<id>.json and out/<id>/*.json are built from it.
 // Tabs: "Businesses" (one row per profile), "Photos" (photo pool, all profiles), "<id>_posts" (one tab per profile).
 import ExcelJS from 'exceljs';
+import { AI_TAB, AI_COLUMNS, aiStatus, applyApproved } from './photos.js';
 
 export const BIZ_TAB = 'Businesses', PHOTO_TAB = 'Photos', postsTab = id => `${id}_posts`;
 
@@ -123,6 +124,14 @@ export function parseWorkbook(wb) {
     (photosBy[bid] ||= []).push({ id: pid || `photo-${n}`, url, alt: cellText(data.alt), last_used: parseDate(data.last_used) || '' });
   }
 
+  const aiBy = {};
+  const aiWs = wb.getWorksheet(AI_TAB);
+  if (aiWs) for (const { data } of readTab(aiWs)) {
+    const bid = cellText(data.business_id), pid = cellText(data.post_id), url = cellText(data.url);
+    if (!bid || !pid || !url) continue;
+    (aiBy[bid] ||= []).push({ post_id: pid, url, status: aiStatus(cellText(data.status)), notes: cellText(data.notes) });
+  }
+
   const seen = new Set();
   for (const { n, data } of readTab(bizWs)) {
     if (!cellText(data.id) && !cellText(data.name)) continue;
@@ -139,7 +148,8 @@ export function parseWorkbook(wb) {
     const photos = photosBy[biz.id] || [];
     const photoUrl = Object.fromEntries(photos.map(p => [p.id, p.url]));
     const ws = wb.getWorksheet(postsTab(biz.id));
-    if (!ws) { warnings.push(`${biz.id}: no "${postsTab(biz.id)}" tab, posts not updated`); out.push({ biz, posts: null, photos }); continue; }
+    const aiRows = aiBy[biz.id] || [];
+    if (!ws) { warnings.push(`${biz.id}: no "${postsTab(biz.id)}" tab, posts not updated`); out.push({ biz, posts: null, photos, aiRows }); continue; }
 
     const posts = [], ids = new Set();
     let drafts = 0;
@@ -170,7 +180,9 @@ export function parseWorkbook(wb) {
     }
     posts.sort((a, b) => a.date.localeCompare(b.date));
     if (drafts) warnings.push(`${biz.id}: ${drafts} draft row(s) left out`);
-    out.push({ biz, posts, photos });
+    const waiting = aiRows.filter(r => r.status === '').length;
+    if (waiting) warnings.push(`${biz.id}: ${waiting} AI photo(s) in ${AI_TAB} waiting for approve/reject`);
+    out.push({ biz, posts: applyApproved(posts, aiRows), photos, aiRows });
   }
   return { businesses: out, errors, warnings };
 }
@@ -221,7 +233,7 @@ export function buildTemplate(profiles) {
     'GBP Posts sheet - yahi sheet master hai. Yahan badlo, phir terminal me: npm run sync',
     '',
     'Businesses: har company/profile ki ek row. active = no karo to wo profile skip hoga.',
-    '   post_time_window (jaise 09:00-19:00): month generator har post ko is beech alag time deta hai. fixed = sab post_time par.',
+    '   post_time_window (khali = 00:00-23:59, poore din me): month generator har post ko alag time deta hai. fixed = sab post_time par.',
     '   services aur areas comma se alag likho. Sab columns ke naam mat badlo.',
     '<id>_posts: har company ka alag tab (jaise amex_posts). Ek row = ek post.',
     '   date: 2026-12-25 ya 25/12/2026. time khali = Businesses wala post_time.',
@@ -233,6 +245,9 @@ export function buildTemplate(profiles) {
     '   chars: apne aap ginta hai (title + text). Laal ho to length theek karo.',
     '   id khali chhod sakte ho, sync khud bana dega.',
     'Photos: sab companies ki photos. business_id = Businesses tab ka id.',
+    'AI_Photos: Gemini ki banayi photos. "Generate AI photos" Action ki photo-review.csv yahan import karo (Append).',
+    '   status: approve = sync us post par photo laga dega. reject + notes = agli baar Gemini nayi photo banayega.',
+    '   khali status = abhi review baaki.',
     '',
     'Naya company tab: koi bhi _posts tab copy karo, naam <id>_posts rakho, rows hata do.',
     'Sheet me customer ka data mat daalo: link share karna padta hai ("Anyone with the link" > Viewer).',
@@ -263,5 +278,7 @@ export function buildTemplate(profiles) {
       formulae: [`AND(I2<>"",OR(I2<${r.min_chars - tol},I2>${r.max_chars + tol}))`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF4CCCC' } } } }] });
   }
   addTab(wb, PHOTO_TAB, PHOTO_COLUMNS, photoRows, { url: 90, alt: 30, last_used: 12 });
+  const ai = addTab(wb, AI_TAB, AI_COLUMNS, [], { post_id: 22, status: 10, preview: 30, url: 60, notes: 40, prompt: 60, created: 18 });
+  ai.dataValidations.add('C2:C1000', { type: 'list', allowBlank: true, formulae: ['"approve,reject"'] });
   return wb;
 }

@@ -41,10 +41,10 @@ export function pickPhotos(photos, existing, count) {
   return Array.from({ length: count }, (_, i) => photos[(start + i) % photos.length].id);
 }
 
-// A different posting time for every date (HH:MM), spread over `window` ("09:00-19:00"), never on :00 or :30,
-// never the same time twice in one batch. Same dates + seed always give the same times, so re-runs are stable.
+// A different posting time for every date (HH:MM), spread over `window` (whole day by default), never on :00 or :30,
+// never the same time twice in one batch or as any time in `avoid` (earlier posts). Same dates + seed always give the same times, so re-runs are stable.
 // window "fixed" (or no window) means every post uses `fallback` (the business's post_time).
-export const DEFAULT_TIME_WINDOW = '09:00-19:00';
+export const DEFAULT_TIME_WINDOW = '00:00-23:59';
 export function pickTimes(dates, { window = DEFAULT_TIME_WINDOW, seed = '', fallback = '11:00', avoid = [] } = {}) {
   const m = String(window || '').match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
   if (!m) return dates.map(() => fallback);
@@ -135,6 +135,7 @@ export async function generateMonth({ biz, existing, photos, dates, generate, ba
   const r = biz.post_rules;
   const times = pickTimes(dates.slice(0, accepted.length), {
     window: r.time_window === 'fixed' ? '' : (r.time_window || DEFAULT_TIME_WINDOW), seed: biz.id, fallback: r.time,
+    avoid: existing.map(p => String(p.date).slice(11, 16)).filter(t => /^\d\d:\d\d$/.test(t)),
   });
   return accepted.map((p, i) => ({
     id: `${biz.id}-${dates[i].replace(/-/g, '')}`,

@@ -91,9 +91,12 @@ test('pickTimes gives every date its own time inside the window, never :00 or :3
     assert.ok(x >= '09:00' && x <= '19:00', x);
     assert.ok(!/:(00|30)$/.test(x), x);
   }
-  assert.deepEqual(pickTimes(dates, { seed: 'amex' }), t);
+  assert.deepEqual(pickTimes(dates, { window: '09:00-19:00', seed: 'amex' }), t);
+  const day = pickTimes(dates, { seed: 'amex' });
+  assert.equal(new Set(day).size, dates.length);
+  assert.ok(day.some(x => x < '09:00') || day.some(x => x > '19:00'));
   assert.deepEqual(pickTimes(['2027-01-01'], { window: '', fallback: '11:00' }), ['11:00']);
-  assert.ok(!pickTimes(['2027-01-01'], { avoid: t.slice(0, 1), seed: 'amex' }).includes(t[0]));
+  assert.ok(!pickTimes(['2027-01-01'], { window: '09:00-19:00', avoid: t.slice(0, 1), seed: 'amex' }).includes(t[0]));
 });
 
 test('generateMonth uses varied times unless the window is "fixed"', async () => {
@@ -102,6 +105,8 @@ test('generateMonth uses varied times unless the window is "fixed"', async () =>
   const rows = await generateMonth({ biz, existing: [], photos: [], dates, generate });
   assert.equal(new Set(rows.map(r => r.time)).size, 3);
   assert.ok(!rows.some(r => r.time === '11:00'));
+  const again = await generateMonth({ biz, existing: rows.map(r => ({ ...r, date: `${r.date}T${r.time}:00+05:30` })), photos: [], dates: ['2027-02-01'], generate: async () => [good()] });
+  assert.ok(!rows.map(r => r.time).includes(again[0].time));
   const fixed = { ...biz, post_rules: { ...biz.post_rules, time_window: 'fixed' } };
   const rows2 = await generateMonth({ biz: fixed, existing: [], photos: [], dates, generate });
   assert.deepEqual(rows2.map(r => r.time), ['11:00', '11:00', '11:00']);

@@ -43,9 +43,19 @@ Without a computer: add the key as a repository secret (Settings > Secrets and v
 
 ## Posting times and offer posts
 
-- Each generated post gets its own time between 09:00 and 19:00 (never on :00 or :30, never twice in a month). Change the range with a `post_time_window` column in the Businesses tab (e.g. `10:00-18:00`), or set it to `fixed` to put every post at `post_time`. A `time` typed in the posts tab always wins.
+- Each generated post gets its own time anywhere in the day, 00:00-23:59 (never on :00 or :30, never a time an earlier post already used). Change the range with a `post_time_window` column in the Businesses tab (e.g. `08:00-22:00`), or set it to `fixed` to put every post at `post_time`. A `time` typed in the posts tab always wins.
 - Offer posts go in the same `<id>_posts` tab with `type = offer` and `offer_end` (and `offer_start` if the offer began before the post date). They follow the same checks as daily posts, can share a day with a daily post at a different time, and do not shift the month generator's dates or photo rotation. On the website they show an "Offer till ..." badge and disappear after `offer_end`. Put the offer terms in `notes` for the Localo Offer post.
-- `out/amex/offers-2026-11-to-2027-03.csv`: AmEx "10% off local shifting" offers (2-7 and 16-25 of each month, Nov 2026 - Mar 2027), ready to import into `amex_posts` below the existing rows. Fill `image` with a photo_id first.
+- `out/amex/offers-2026-11-to-2027-03.csv`: AmEx "10% off local shifting" offers (2-7 and 16-25 of each month, Nov 2026 - Mar 2027), ready to import into `amex_posts` below the existing rows. Leave `image` empty to get an AI photo (below), or fill a photo_id.
+
+## AI photos (Gemini) with approval
+
+For upcoming posts with an empty `image`:
+1. Actions > **Generate AI photos** > Run workflow (business `amex`, which = `offer` / `post` / `all`). Gemini draws one photo per post (no text, logos, branded trucks or faces); the photos are committed to `photos/ai/` and the list to `out/<id>/photo-review.csv` (also under the run's Artifacts; the run's Summary page shows the photos).
+2. In the sheet: a tab named `AI_Photos`. First time: File > Import > Upload the CSV > "Replace current sheet"; later runs: "Append to current sheet". The `preview` column shows each photo.
+3. `status`: `approve`, or `reject` with what to change in `notes`. Run step 1 again to redo rejected ones.
+4. Run **Sync posts from Google Sheet**: approved photos go on their posts (and the website). Upload the same photo (the `url`) to Localo for the Google post.
+
+`npm run photos -- amex --only offer` does step 1 locally (GEMINI_API_KEY and GBP_SHEET_ID in .env). If Google retires the image model, set the repository variable `GEMINI_IMAGE_MODEL`.
 
 ## Everything from the Actions tab (no computer needed)
 
