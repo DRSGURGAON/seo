@@ -34,6 +34,9 @@ jobs:
       - name: Generate posts with Gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Optional repository variable (Settings > Secrets and variables > Actions > Variables)
+          # to switch models without a code change when Google retires one.
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           BUSINESS: ${{ inputs.business }}
           MONTH: ${{ inputs.month }}
           FROM: ${{ inputs.from }}
