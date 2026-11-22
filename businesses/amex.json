@@ -11,8 +11,47 @@
   "instagram": "https://www.instagram.com/packersmoversingurgaon/",
   "primary_keyword": "best packers in Gurgaon",
   "secondary_keyword": "best movers in Gurgaon",
-  "services": ["house shifting", "office relocation", "car and bike transport", "storage and warehousing", "transit insurance", "defence relocation"],
-  "areas": ["Sector 110", "New Palam Vihar", "Sector 56", "Sector 49", "Sector 37", "DLF", "Dwarka Expressway", "Sohna Road", "Golf Course Road", "Sushant Lok", "Cyber City", "Udyog Vihar", "Manesar", "Delhi", "Noida"],
-  "post_rules": { "min_chars": 700, "max_chars": 1000, "length_tolerance": 10, "max_similarity": 0.5, "time": "11:00", "tz": "Asia/Kolkata", "cta": "call" },
-  "widget": { "heading": "Live Updates", "city": "Gurgaon", "accent": "#9b1c2c", "cols": 4, "limit": 8 }
+  "services": [
+    "house shifting",
+    "office relocation",
+    "car and bike transport",
+    "storage and warehousing",
+    "transit insurance",
+    "defence relocation"
+  ],
+  "areas": [
+    "Sector 110",
+    "New Palam Vihar",
+    "Sector 56",
+    "Sector 49",
+    "Sector 37",
+    "DLF",
+    "Dwarka Expressway",
+    "Sohna Road",
+    "Golf Course Road",
+    "Sushant Lok",
+    "Cyber City",
+    "Udyog Vihar",
+    "Manesar",
+    "Delhi",
+    "Noida"
+  ],
+  "post_rules": {
+    "min_chars": 700,
+    "max_chars": 1000,
+    "length_tolerance": 10,
+    "max_similarity": 0.5,
+    "time": "11:00",
+    "tz": "Asia/Kolkata",
+    "cta": "call"
+  },
+  "widget": {
+    "heading": "Live Updates",
+    "city": "Gurgaon",
+    "accent": "#9b1c2c",
+    "cols": 4,
+    "limit": 8
+  },
+  "whatsapp_text": "Hi! I saw your update and need a moving quote.",
+  "directions_url": "https://www.google.com/maps/search/?api=1&query=American+Express+Packers+and+Movers+Sector+110+Gurgaon"
 }

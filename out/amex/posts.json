@@ -1,6 +1,30 @@
 {
  "business": "American Express Packers and Movers",
  "profile_url": "https://share.google/rqyJVTqpjHoKiw0Pw",
+ "city": "Gurgaon",
+ "heading": "Live Updates",
+ "actions": [
+  {
+   "id": "call",
+   "label": "Call now",
+   "url": "tel:+919008590012"
+  },
+  {
+   "id": "whatsapp",
+   "label": "WhatsApp",
+   "url": "https://wa.me/919008590012?text=Hi%21%20I%20saw%20your%20update%20and%20need%20a%20moving%20quote."
+  },
+  {
+   "id": "directions",
+   "label": "Directions",
+   "url": "https://www.google.com/maps/search/?api=1&query=American+Express+Packers+and+Movers+Sector+110+Gurgaon"
+  },
+  {
+   "id": "review",
+   "label": "Review us",
+   "url": "https://share.google/rqyJVTqpjHoKiw0Pw"
+  }
+ ],
  "posts": [
   {
    "id": "amex-001",
@@ -241,30 +265,6 @@
    "text": "The best packers in Gurgaon may still fit you in. Sometimes a transfer or lease deadline leaves only two days. American Express Packers and Movers can often arrange a crew and truck at short notice, depending on the date, with priority on packing essentials first. Call early in the morning for quicker confirmation. To book, send the date, pick-up and drop addresses, floor details and an approximate list of items. You will get a call back with a clear price and a time for the survey, usually within the same day. Call during the day and our team will answer questions about price, timing, packing and special items in plain language. Need the best movers in Gurgaon at short notice? Call now to check slots.",
    "image": "https://gcp.localo-user-content.com/user_content/DOBHjnjVZPPFBv4x3bPBNw/xLhJ7kEe_RdFPg8toeD5eQxh7m1OSjguof-Q4qm6SI0",
    "cta": "call"
-  }
- ],
- "city": "Gurgaon",
- "heading": "Live Updates",
- "actions": [
-  {
-   "id": "call",
-   "label": "Call now",
-   "url": "tel:+919008590012"
-  },
-  {
-   "id": "whatsapp",
-   "label": "WhatsApp",
-   "url": "https://wa.me/919008590012?text=Hi%21%20I%20saw%20your%20update%20and%20need%20a%20moving%20quote."
-  },
-  {
-   "id": "directions",
-   "label": "Directions",
-   "url": "https://www.google.com/maps/search/?api=1&query=American+Express+Packers+and+Movers+Sector+110+Gurgaon"
-  },
-  {
-   "id": "review",
-   "label": "Review us",
-   "url": "https://share.google/rqyJVTqpjHoKiw0Pw"
   }
  ]
 }
