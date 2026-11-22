@@ -75,7 +75,8 @@ test('buildPrompt tells Gemini the publish month and season, and forbids invente
   const p = buildPrompt(biz, { count: 2, avoidTitles: [], month: '2026-12' });
   assert.match(p, /December 2026/);
   assert.match(p, /winter/);
-  assert.match(p, /never be described as included/);
+  assert.match(p, /only in a post that is about insurance/);
+  assert.match(p, /never included/);
   assert.match(seasonFor('2027-07'), /monsoon/);
   assert.match(seasonFor('2027-04'), /summer/);
   assert.match(seasonFor('2026-10'), /festive/);
