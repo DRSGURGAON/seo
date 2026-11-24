@@ -19,7 +19,12 @@ export const BLOG_SCHEMA = {
 
 export const blogsPerMonth = biz => (Number.isFinite(biz.blogs_per_month) ? biz.blogs_per_month : BLOG_RULES.per_month);
 export const wordCount = s => (String(s).match(/[A-Za-z0-9][A-Za-z0-9'’-]*/g) || []).length;
-export const slugify = s => String(s).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
+// Where this business's blog pages live: /blogs/ for a whole site, /gurgaon/blogs/ for a city folder like storagewale.com/gurgaon/.
+export function blogPath(website) {
+  try { return `${new URL(website).pathname.replace(/\/+$/, '')}/blogs/`; } catch { return '/blogs/'; }
+}
+
+export const slugify =s => String(s).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
 
 // `count` dates spread evenly over the month (from `from` if given), e.g. 8 -> roughly every 4th day.
 export function spreadDates(month, count, from) {
@@ -113,7 +118,7 @@ export async function generateBlogs({ biz, existing = [], dates, photos = [], si
 export async function fetchSitePages(website, fetchFn = fetch) {
   if (!website) return [];
   try {
-    const base = website.replace(/\/+$/, '');
+    const base = new URL(website).origin; // the sitemap lives at the domain root even when the profile is a city folder
     const get = async u => { const r = await fetchFn(u); return r.ok ? r.text() : ''; };
     const locs = xml => [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map(m => m[1]);
     const index = await get(`${base}/sitemap-index.xml`) || await get(`${base}/sitemap.xml`);

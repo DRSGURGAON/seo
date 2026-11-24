@@ -2,7 +2,7 @@
 // Tabs: "Businesses" (one row per profile), "Photos" (photo pool, all profiles), "<id>_posts" (one tab per profile).
 import ExcelJS from 'exceljs';
 import { AI_TAB, AI_COLUMNS, aiStatus, applyApproved } from './photos.js';
-import { SLUG_RE, slugify, wordCount, markdownToHtml } from './blogs.js';
+import { SLUG_RE, slugify, wordCount, markdownToHtml, blogPath } from './blogs.js';
 
 export const BIZ_TAB = 'Businesses', PHOTO_TAB = 'Photos', postsTab = id => `${id}_posts`, blogsTab = id => `${id}_blogs`;
 
@@ -223,7 +223,7 @@ function parseBlogs(ws, biz, photoUrl, errors, warnings) {
 }
 
 // blogs.json: everything a website build needs to make /blogs/<slug>/ pages. Pages go live on/after `date`.
-export const blogFeed = (biz, blogs) => ({ business: biz.name, website: biz.website || '', path: '/blogs/', blogs });
+export const blogFeed = (biz, blogs) => ({ business: biz.name, website: biz.website || '', path: blogPath(biz.website), blogs });
 
 export async function loadWorkbook({ file, sheetId }) {
   const wb = new ExcelJS.Workbook();
