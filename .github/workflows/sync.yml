@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   sync:
+    # Only main feeds the website widget — a run started on another branch would commit there by mistake.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
