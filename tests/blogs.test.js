@@ -151,3 +151,21 @@ test('geminiJson falls back to another model when the first stays busy, and keep
   ] }) }));
   assert.deepEqual(list, ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-2.5-pro']);
 });
+
+test('parseCsv reads back what toCsv wrote (commas, quotes, newlines)', async () => {
+  const { parseCsv } = await import('../src/blogs.js');
+  const { toCsv } = await import('../src/month.js');
+  const rows = [{ id: 'a', date: '2026-12-02', body: '## Hi, "there"\n\n- one\r\n- two' }, { id: 'b', date: '2026-12-06', body: 'plain' }];
+  assert.deepEqual(parseCsv(toCsv(rows, ['id', 'date', 'body'])), rows);
+});
+
+test('generateBlogs keeps finished blogs when Gemini goes down mid-run', async () => {
+  let n = 0;
+  const rows = await generateBlogs({
+    biz, dates: ['2026-12-02', '2026-12-06', '2026-12-10'],
+    generate: async () => { if (++n === 2) throw new Error('Gemini 503: busy'); return blog('first'); },
+  });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].date, '2026-12-02');
+  assert.match(rows.stopped, /503/);
+});
