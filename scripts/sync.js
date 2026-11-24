@@ -1,10 +1,10 @@
-// Pull the Google Sheet and rebuild businesses/<id>.json, out/<id>/posts.json and out/<id>/photos.json.
+// Pull the Google Sheet and rebuild businesses/<id>.json, out/<id>/posts.json, photos.json and blogs.json (from <id>_blogs).
 // Usage: npm run sync                       (uses GBP_SHEET_ID from .env)
 //        npm run sync -- --file my.xlsx     (use a downloaded .xlsx instead)
 //        npm run sync -- --dry              (show what would change, write nothing)
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { loadWorkbook, parseWorkbook, feedHeader } from '../src/sheet.js';
-import { checkPosts } from '../src/check.js';
+import { loadWorkbook, parseWorkbook, feedHeader, blogFeed } from '../src/sheet.js';
+import { checkPosts, checkBlogs } from '../src/check.js';
 
 const args = process.argv.slice(2);
 const file = args.includes('--file') ? args[args.indexOf('--file') + 1] : null;
@@ -37,16 +37,17 @@ async function main() {
   };
 
   let problems = 0;
-  for (const { biz, posts, photos } of businesses) {
+  for (const { biz, posts, photos, blogs } of businesses) {
     const changed = [];
     if (writeIfChanged(`businesses/${biz.id}.json`, biz)) changed.push(`businesses/${biz.id}.json`);
     if (posts) {
       if (writeIfChanged(`out/${biz.id}/posts.json`, { ...feedHeader(biz), posts })) changed.push(`out/${biz.id}/posts.json`);
     }
     if (photos.length && writeIfChanged(`out/${biz.id}/photos.json`, photos)) changed.push(`out/${biz.id}/photos.json`);
-    const issues = posts ? checkPosts(biz, posts) : [];
+    if (blogs && writeIfChanged(`out/${biz.id}/blogs.json`, blogFeed(biz, blogs))) changed.push(`out/${biz.id}/blogs.json`);
+    const issues = [...(posts ? checkPosts(biz, posts) : []), ...(blogs ? checkBlogs(biz, blogs) : [])];
     problems += issues.length;
-    console.log(`\n${biz.id}: ${posts ? posts.length : 0} posts, ${issues.length} problem(s)` +
+    console.log(`\n${biz.id}: ${posts ? posts.length : 0} posts${blogs ? `, ${blogs.length} blogs` : ''}, ${issues.length} problem(s)` +
       (changed.length ? `, ${dry ? 'would update' : 'updated'} ${changed.join(', ')}` : ', no changes'));
     issues.forEach(i => console.log(`  ${i}`));
   }

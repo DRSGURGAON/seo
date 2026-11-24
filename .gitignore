@@ -8,3 +8,4 @@ sheet/
 !.env.example
 out/*/*.posts.csv
 out/*/batch/
+out/*/*.blogs.csv

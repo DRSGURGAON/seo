@@ -2,18 +2,21 @@
 // Tabs: "Businesses" (one row per profile), "Photos" (photo pool, all profiles), "<id>_posts" (one tab per profile).
 import ExcelJS from 'exceljs';
 import { AI_TAB, AI_COLUMNS, aiStatus, applyApproved } from './photos.js';
+import { SLUG_RE, slugify, wordCount, markdownToHtml } from './blogs.js';
 
-export const BIZ_TAB = 'Businesses', PHOTO_TAB = 'Photos', postsTab = id => `${id}_posts`;
+export const BIZ_TAB = 'Businesses', PHOTO_TAB = 'Photos', postsTab = id => `${id}_posts`, blogsTab = id => `${id}_blogs`;
 
 // [column, how to read it]. Lists are comma-separated in one cell.
 export const BIZ_COLUMNS = [
   'active', 'id', 'name', 'website', 'phone', 'whatsapp', 'email', 'address', 'established', 'gbp_profile_url', 'instagram',
   'primary_keyword', 'secondary_keyword', 'services', 'areas', 'post_time', 'post_time_window', 'timezone', 'cta', 'min_chars', 'max_chars',
   'length_tolerance', 'max_similarity', 'widget_heading', 'widget_city', 'widget_accent', 'widget_cols', 'widget_limit',
-  'whatsapp_text', 'directions_url', 'localo_location', 'category', 'plan',
+  'whatsapp_text', 'directions_url', 'localo_location', 'category', 'plan', 'blogs_per_month',
 ];
 export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes', 'type', 'offer_start', 'offer_end', 'banner'];
 export const POST_TYPES = ['post', 'offer'];
+// <id>_blogs: website-only articles. body is Markdown (## headings, - lists, **bold**).
+export const BLOG_COLUMNS = ['id', 'date', 'slug', 'title', 'description', 'keyword', 'body', 'image', 'status', 'words', 'notes'];
 export const PHOTO_COLUMNS = ['business_id', 'photo_id', 'url', 'alt', 'last_used'];
 const REQUIRED_BIZ = ['id', 'name', 'phone', 'primary_keyword', 'secondary_keyword', 'min_chars', 'max_chars', 'max_similarity'];
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -94,7 +97,7 @@ export function bizFromRow(d) {
       cols: num(d.widget_cols, 4), limit: num(d.widget_limit, 8),
     },
     whatsapp_text: t('whatsapp_text'), directions_url: t('directions_url'), localo_location: t('localo_location'),
-    category: t('category'), plan: t('plan'),
+    category: t('category'), plan: t('plan'), blogs_per_month: num(d.blogs_per_month, undefined),
   };
   for (const k of Object.keys(biz)) if (biz[k] === '' || biz[k] === undefined) delete biz[k];
   return biz;
@@ -150,7 +153,7 @@ export function parseWorkbook(wb) {
     const photoUrl = Object.fromEntries(photos.map(p => [p.id, p.url]));
     const ws = wb.getWorksheet(postsTab(biz.id));
     const aiRows = aiBy[biz.id] || [];
-    if (!ws) { warnings.push(`${biz.id}: no "${postsTab(biz.id)}" tab, posts not updated`); out.push({ biz, posts: null, photos, aiRows }); continue; }
+    if (!ws) { warnings.push(`${biz.id}: no "${postsTab(biz.id)}" tab, posts not updated`); out.push({ biz, posts: null, photos, aiRows, blogs: parseBlogs(wb.getWorksheet(blogsTab(biz.id)), biz, photoUrl, errors, warnings) }); continue; }
 
     const posts = [], ids = new Set();
     let drafts = 0;
@@ -181,13 +184,46 @@ export function parseWorkbook(wb) {
       posts.push({ id, date: `${date}T${time}:00${tzOffset(biz.post_rules.tz, date)}`, title, text, image: photoUrl[img] || img, cta: cellText(p.cta) || biz.post_rules.cta, ...offer });
     }
     posts.sort((a, b) => a.date.localeCompare(b.date));
+    const blogs = parseBlogs(wb.getWorksheet(blogsTab(biz.id)), biz, photoUrl, errors, warnings);
     if (drafts) warnings.push(`${biz.id}: ${drafts} draft row(s) left out`);
     const waiting = aiRows.filter(r => r.status === '').length;
     if (waiting) warnings.push(`${biz.id}: ${waiting} AI photo(s) in ${AI_TAB} waiting for approve/reject`);
-    out.push({ biz, posts: applyApproved(posts, aiRows), photos, aiRows });
+    out.push({ biz, posts: applyApproved(posts, aiRows), photos, aiRows, blogs });
   }
   return { businesses: out, errors, warnings };
 }
+
+// <id>_blogs tab -> blog list, or null when the tab doesn't exist (then blogs.json is left alone).
+function parseBlogs(ws, biz, photoUrl, errors, warnings) {
+  if (!ws) return null;
+  const blogs = [], slugs = new Set();
+  let drafts = 0;
+  for (const { n, data: b } of readTab(ws)) {
+    const at = `${blogsTab(biz.id)} row ${n}`;
+    const title = cellText(b.title), body = cellText(b.body), status = cellText(b.status).toLowerCase() || 'scheduled';
+    if (!title && !body && !cellText(b.date)) continue;
+    if (title.toLowerCase() === 'title' && cellText(b.date).toLowerCase() === 'date') { warnings.push(`${at}: heading row from a CSV import skipped (you can delete it)`); continue; }
+    if (status === 'draft' || status === 'skip') { drafts++; continue; }
+    const date = parseDate(b.date);
+    if (!date) { errors.push(`${at}: date "${cellText(b.date)}" not understood (use 2026-12-25 or 25/12/2026)`); continue; }
+    if (!title || !body) { errors.push(`${at}: title and body are required`); continue; }
+    const slug = cellText(b.slug) || slugify(title);
+    if (!SLUG_RE.test(slug)) { errors.push(`${at}: slug "${slug}" must be lowercase words joined by - (like 2bhk-shifting-cost-gurgaon)`); continue; }
+    if (slugs.has(slug)) { errors.push(`${at}: slug "${slug}" used twice`); continue; }
+    slugs.add(slug);
+    const img = cellText(b.image);
+    blogs.push({
+      id: cellText(b.id) || `${biz.id}-blog-${date.replace(/-/g, '')}`, date, slug, title, description: cellText(b.description), keyword: cellText(b.keyword),
+      image: photoUrl[img] || img, words: wordCount(body), body, html: markdownToHtml(body),
+    });
+  }
+  blogs.sort((a, b) => a.date.localeCompare(b.date));
+  if (drafts) warnings.push(`${biz.id}: ${drafts} draft blog(s) left out`);
+  return blogs;
+}
+
+// blogs.json: everything a website build needs to make /blogs/<slug>/ pages. Pages go live on/after `date`.
+export const blogFeed = (biz, blogs) => ({ business: biz.name, website: biz.website || '', path: '/blogs/', blogs });
 
 export async function loadWorkbook({ file, sheetId }) {
   const wb = new ExcelJS.Workbook();
@@ -223,11 +259,22 @@ export function bizToRow(biz, header = {}) {
     widget_heading: w.heading, widget_city: w.city, widget_accent: w.accent, widget_cols: w.cols, widget_limit: w.limit,
     whatsapp_text: biz.whatsapp_text ?? (wa && new URL(wa.url).searchParams.get('text')) ?? '',
     directions_url: biz.directions_url ?? dir?.url ?? '', localo_location: biz.localo_location || '',
-    category: biz.category || '', plan: biz.plan || '',
+    category: biz.category || '', plan: biz.plan || '', blogs_per_month: biz.blogs_per_month ?? '',
   };
 }
 
-// profiles: [{ biz, feed (posts.json or null) }]
+function addBlogsTab(wb, biz, blogs, photoIds) {
+  const ws = addTab(wb, blogsTab(biz.id), BLOG_COLUMNS, [], { id: 22, date: 12, slug: 34, title: 44, description: 50, keyword: 30, body: 90, image: 10, status: 11, words: 8, notes: 20 });
+  blogs.forEach(b => ws.addRow({ id: b.id, date: b.date, slug: b.slug, title: b.title, description: b.description, keyword: b.keyword, body: b.body,
+    image: photoIds.get(b.image) || b.image || '', status: 'scheduled' }));
+  const last = 300;
+  for (let i = 2; i <= last; i++) ws.getCell(`J${i}`).value = { formula: `IF(G${i}="","",COUNTA(SPLIT(TRIM(G${i})," ")))` };
+  ws.getColumn('body').alignment = { wrapText: true, vertical: 'top' };
+  ws.dataValidations.add(`I2:I${last}`, { type: 'list', allowBlank: true, formulae: ['"draft,scheduled"'] });
+  return ws;
+}
+
+// profiles: [{ biz, feed (posts.json or null), blogs (blogs.json list or undefined) }]
 export function buildTemplate(profiles) {
   const wb = new ExcelJS.Workbook();
   const guide = wb.addWorksheet('Guide');
@@ -248,6 +295,10 @@ export function buildTemplate(profiles) {
     '   image: Photos tab ka photo_id (jaise p01) ya poora URL.',
     '   chars: apne aap ginta hai (title + text). Laal ho to length theek karo.',
     '   id khali chhod sakte ho, sync khud bana dega.',
+    '<id>_blogs: sirf WEBSITE ke blog articles (GBP par nahi jaate). Ek row = ek blog = website par /blogs/<slug>/ page.',
+    '   "Generate month of blogs" Action ka CSV yahan import karo. body Markdown me hai: ## heading, - list, **bold**.',
+    '   slug = page ka URL (chhote letters aur -). Website par blog apni date se dikhega. draft = nahi jayega.',
+    '   Businesses ka blogs_per_month: mahine me kitne blog (khali = 8).',
     'Photos: sab companies ki photos. business_id = Businesses tab ka id.',
     'AI_Photos: "Generate AI photos" Action ki photos (apni photo ya Gemini; offer par banner). photo-review.csv yahan import karo.',
     '   Import: File > Import > Upload > "Append to current sheet". Upar wali heading row aaye to wo row delete karo.',
@@ -263,7 +314,7 @@ export function buildTemplate(profiles) {
     { name: 30, address: 40, services: 40, areas: 50, primary_keyword: 26, secondary_keyword: 26, website: 28, gbp_profile_url: 30, whatsapp_text: 40, directions_url: 40 });
 
   const photoRows = [], aiRows = [];
-  for (const { biz, feed } of profiles) {
+  for (const { biz, feed, blogs } of profiles) {
     const ws = addTab(wb, postsTab(biz.id), POST_COLUMNS, [], { id: 12, date: 12, time: 8, title: 40, text: 80, image: 10, cta: 10, status: 11, chars: 8, notes: 24 });
     const ids = new Map();
     (feed?.posts || []).forEach(p => {
@@ -273,6 +324,7 @@ export function buildTemplate(profiles) {
       ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: p.image_ai ? '' : ids.get(p.image) || '', cta: p.cta, status: 'scheduled',
         type: p.type || '', offer_start: p.offer_start || '', offer_end: p.offer_end || '', banner: p.banner || '' });
     });
+    addBlogsTab(wb, biz, blogs || [], ids);
     for (const [url, id] of ids) photoRows.push({ business_id: biz.id, photo_id: id, url, alt: '', last_used: '' });
 
     const last = 400, r = biz.post_rules || {}, tol = r.length_tolerance || 0;

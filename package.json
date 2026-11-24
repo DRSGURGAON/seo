@@ -9,7 +9,8 @@
     "sync": "node scripts/sync.js",
     "sheet:export": "node scripts/sheet-export.js",
     "month": "node scripts/month.js",
-    "photos": "node scripts/photos.js"
+    "photos": "node scripts/photos.js",
+    "blogs": "node scripts/blogs.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
