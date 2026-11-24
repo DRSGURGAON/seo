@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Browser__*",
+      "Bash(node scripts/batch.js *)",
+      "Bash(npm run sync *)",
+      "Bash(npm run sync)",
+      "Bash(npm test)",
+      "Bash(gh workflow run sync.yml *)",
+      "Bash(gh run watch *)",
+      "Bash(gh run list *)",
+      "PowerShell(Get-Content -Raw -Encoding UTF8 out/*)"
+    ]
+  }
+}

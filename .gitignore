@@ -7,3 +7,4 @@ node_modules/
 sheet/
 !.env.example
 out/*/*.posts.csv
+out/*/batch/
