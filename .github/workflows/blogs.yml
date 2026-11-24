@@ -38,6 +38,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
           BUSINESS: ${{ inputs.business }}
           MONTH: ${{ inputs.month }}
           COUNT: ${{ inputs.count }}

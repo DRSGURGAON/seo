@@ -119,3 +119,35 @@ test('city-folder websites: sitemap from the domain root, blogs under the city',
   await fetchSitePages('https://x.in/pune/', async u => { seen.push(u); return { ok: false, text: async () => '' }; });
   assert.equal(seen[0], 'https://x.in/sitemap-index.xml');
 });
+
+test('geminiJson falls back to another model when the first stays busy, and keeps it', async () => {
+  const { geminiJson, listTextModels, resetModelSwitch } = await import('../src/gemini.js');
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    if (url.includes('busy-flash')) return { ok: false, status: 503, statusText: 'busy', json: async () => ({ error: { message: 'high demand' } }) };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"ok":1}' }] } }] }) };
+  };
+  try {
+    resetModelSwitch();
+    const opts = { apiKey: 'k', model: 'busy-flash', prompt: 'p', schema: {} };
+    const deps = { list: async () => ['busy-flash', 'gemini-9-flash'], retry: { wait: async () => {} }, log: () => {} };
+    assert.deepEqual(await geminiJson(opts, deps), { ok: 1 });
+    assert.ok(calls.at(-1).includes('gemini-9-flash'));
+    calls.length = 0;
+    await geminiJson(opts, deps);
+    assert.equal(calls.length, 1, 'second call goes straight to the working model');
+    resetModelSwitch();
+  } finally { globalThis.fetch = realFetch; }
+
+  const list = await listTextModels('k', async () => ({ ok: true, json: async () => ({ models: [
+    { name: 'models/gemini-2.5-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.8-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.8-flash-image', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.9-flash-preview-11-2026', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
+  ] }) }));
+  assert.deepEqual(list, ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-2.5-pro']);
+});
