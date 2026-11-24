@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main # newest main, not the commit from when the run was queued
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -42,4 +44,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Sync posts from Google Sheet"
-          git push
+          # Another Action may have pushed to main meanwhile: rebase on it (our changes win) and retry.
+          for i in 1 2 3; do
+            if git pull --rebase -X theirs origin main && git push origin HEAD:main; then exit 0; fi
+            echo "Push attempt $i failed, retrying..."; sleep $((i * 5))
+          done
+          echo "::error::Could not push to main after 3 tries. Run this Action again."
+          exit 1

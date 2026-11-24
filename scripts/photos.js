@@ -93,6 +93,10 @@ async function main() {
     '| Post | Title | Photo |', '|---|---|---|',
     ...rows.map(r => `| ${r.post_id} | ${(b.posts.find(p => p.id === r.post_id)?.title || '').replace(/\|/g, '\\|')} | <img src="${r.url}" width="240"> |`), '',
   ].join('\n'));
-  if (rows.length < targets.length) process.exitCode = 1;
+  // Some photos made: the run passes (they are ready to review) and the misses show as a warning.
+  if (rows.length < targets.length) {
+    const msg = `${targets.length - rows.length} of ${targets.length} photo(s) could not be made (see the log above); run again later for those.`;
+    console.log(process.env.GITHUB_ACTIONS ? `::warning::${msg}` : msg);
+  }
 }
 await main().catch(e => { console.error(e.message); process.exitCode = 1; });
