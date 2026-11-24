@@ -25,3 +25,11 @@ test('addBanner returns a 1200x900 JPEG whatever the input size', async () => {
   const meta = await sharp(out).metadata();
   assert.deepEqual([meta.format, meta.width, meta.height], ['jpeg', 1200, 900]);
 });
+
+test('splitHeadline puts the percentage in the badge', async () => {
+  const { splitHeadline } = await import('../src/banner.js');
+  assert.deepEqual(splitHeadline('10% OFF LOCAL SHIFTING'), { badge: '10%', line: 'LOCAL SHIFTING' });
+  assert.deepEqual(splitHeadline('FLAT 15 % OFF PACKING'), { badge: '15%', line: 'FLAT PACKING' });
+  assert.deepEqual(splitHeadline('10% OFF'), { badge: '10%', line: 'SPECIAL OFFER' });
+  assert.deepEqual(splitHeadline('FREE SURVEY'), { badge: '', line: 'FREE SURVEY' });
+});
