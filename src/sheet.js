@@ -260,13 +260,15 @@ export function buildTemplate(profiles) {
   addTab(wb, BIZ_TAB, BIZ_COLUMNS, profiles.map(p => bizToRow(p.biz, p.feed || {})),
     { name: 30, address: 40, services: 40, areas: 50, primary_keyword: 26, secondary_keyword: 26, website: 28, gbp_profile_url: 30, whatsapp_text: 40, directions_url: 40 });
 
-  const photoRows = [];
+  const photoRows = [], aiRows = [];
   for (const { biz, feed } of profiles) {
     const ws = addTab(wb, postsTab(biz.id), POST_COLUMNS, [], { id: 12, date: 12, time: 8, title: 40, text: 80, image: 10, cta: 10, status: 11, chars: 8, notes: 24 });
     const ids = new Map();
     (feed?.posts || []).forEach(p => {
-      if (p.image && !ids.has(p.image)) ids.set(p.image, `p${pad(ids.size + 1)}`);
-      ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: ids.get(p.image) || '', cta: p.cta, status: 'scheduled',
+      // Approved AI/banner photos go back to AI_Photos (not the real-photo pool), so the post's image stays empty.
+      if (p.image_ai) aiRows.push({ business_id: biz.id, post_id: p.id, status: 'approve', preview: { formula: `IMAGE("${p.image}")` }, url: p.image });
+      else if (p.image && !ids.has(p.image)) ids.set(p.image, `p${pad(ids.size + 1)}`);
+      ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: p.image_ai ? '' : ids.get(p.image) || '', cta: p.cta, status: 'scheduled',
         type: p.type || '', offer_start: p.offer_start || '', offer_end: p.offer_end || '', banner: p.banner || '' });
     });
     for (const [url, id] of ids) photoRows.push({ business_id: biz.id, photo_id: id, url, alt: '', last_used: '' });
@@ -281,7 +283,7 @@ export function buildTemplate(profiles) {
       formulae: [`AND(I2<>"",OR(I2<${r.min_chars - tol},I2>${r.max_chars + tol}))`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF4CCCC' } } } }] });
   }
   addTab(wb, PHOTO_TAB, PHOTO_COLUMNS, photoRows, { url: 90, alt: 30, last_used: 12 });
-  const ai = addTab(wb, AI_TAB, AI_COLUMNS, [], { post_id: 22, status: 10, preview: 30, url: 60, notes: 40, prompt: 60, created: 18 });
+  const ai = addTab(wb, AI_TAB, AI_COLUMNS, aiRows, { post_id: 22, status: 10, preview: 30, url: 60, notes: 40, prompt: 60, created: 18 });
   ai.dataValidations.add('C2:C1000', { type: 'list', allowBlank: true, formulae: ['"approve,reject"'] });
   return wb;
 }
