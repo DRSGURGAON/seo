@@ -7,12 +7,12 @@
   {
    "id": "call",
    "label": "Call now",
-   "url": "tel:+919008590012"
+   "url": "tel:+919008590048"
   },
   {
    "id": "whatsapp",
    "label": "WhatsApp",
-   "url": "https://wa.me/919008590012?text=Hi%21%20I%20saw%20your%20update%20and%20need%20a%20moving%20quote."
+   "url": "https://wa.me/+919008590048?text=Hi%21%20I%20saw%20your%20update%20and%20need%20a%20moving%20quote."
   },
   {
    "id": "directions",
