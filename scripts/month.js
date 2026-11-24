@@ -3,7 +3,7 @@
 //        npm run month -- amex 2026-12 --from 2026-12-22
 // Writes out/<id>/<YYYY-MM>.posts.csv (gitignored). The sheet stays the source of truth: import the
 // CSV there, review, then `npm run sync`.
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { geminiJson } from '../src/gemini.js';
 import { generateMonth, monthDates, dayAfter, isOffer, POST_SCHEMA, toCsv, toSummary } from '../src/month.js';
 import { POST_COLUMNS } from '../src/sheet.js';
@@ -20,6 +20,10 @@ async function main() {
   if (!apiKey) { console.error('GEMINI_API_KEY missing. Add it to .env (local) or as a GitHub Actions secret.'); process.exitCode = 1; return; }
   const biz = JSON.parse(readFileSync(`businesses/${id}.json`, 'utf8'));
   const existing = existsSync(`out/${id}/posts.json`) ? JSON.parse(readFileSync(`out/${id}/posts.json`, 'utf8')).posts : [];
+  // Posts of the other profiles (out/<other id>/posts.json), so the new posts don't repeat them.
+  const otherProfiles = readdirSync('out', { withFileTypes: true })
+    .filter(d => d.isDirectory() && d.name !== id && existsSync(`out/${d.name}/posts.json`))
+    .flatMap(d => JSON.parse(readFileSync(`out/${d.name}/posts.json`, 'utf8')).posts || []);
   const photos = existsSync(`out/${id}/photos.json`) ? JSON.parse(readFileSync(`out/${id}/photos.json`, 'utf8')) : [];
   // Offer posts are extra posts on top of the daily ones, so they don't move the "next day to fill".
   const daily = existing.filter(p => !isOffer(p));
@@ -30,7 +34,7 @@ async function main() {
 
   console.log(`${id}: generating ${dates.length} posts for ${dates[0]} .. ${dates.at(-1)} with ${model}`);
   const rows = await generateMonth({
-    biz, existing, photos, dates, log: console.log,
+    biz, existing, otherProfiles, photos, dates, log: console.log,
     generate: prompt => geminiJson({ apiKey, model, prompt, schema: POST_SCHEMA }),
   });
   mkdirSync(`out/${id}`, { recursive: true });

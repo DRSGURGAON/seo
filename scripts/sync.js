@@ -4,7 +4,7 @@
 //        npm run sync -- --dry              (show what would change, write nothing)
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { loadWorkbook, parseWorkbook, feedHeader } from '../src/sheet.js';
-import { checkPosts } from '../src/check.js';
+import { checkPosts, checkAcrossProfiles } from '../src/check.js';
 
 const args = process.argv.slice(2);
 const file = args.includes('--file') ? args[args.indexOf('--file') + 1] : null;
@@ -50,6 +50,12 @@ async function main() {
       (changed.length ? `, ${dry ? 'would update' : 'updated'} ${changed.join(', ')}` : ', no changes'));
     issues.forEach(i => console.log(`  ${i}`));
   }
+  const across = checkAcrossProfiles(businesses);
+  if (across.length) {
+    console.log(`\n${across.length} post pair(s) too similar between profiles (rewrite one of each pair):`);
+    across.forEach(i => console.log(`  ${i}`));
+  }
+  problems += across.length;
   process.exitCode = problems ? 1 : 0;
 }
 await main();

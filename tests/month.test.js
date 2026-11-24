@@ -116,3 +116,15 @@ test('offer posts do not move the photo rotation', () => {
   const photos = [{ id: 'p1', url: 'u1' }, { id: 'p2', url: 'u2' }, { id: 'p3', url: 'u3' }];
   assert.deepEqual(pickPhotos(photos, [{ image: 'u1' }, { image: 'u3', type: 'offer' }], 1), ['p2']);
 });
+
+test('generateMonth rejects a post that copies another profile, and the prompt lists its titles', async () => {
+  const copy = good();
+  const prompts = [];
+  let call = 0;
+  const generate = async prompt => { prompts.push(prompt); return ++call === 1 ? [copy] : [good()]; };
+  const rows = await generateMonth({ biz, existing: [], otherProfiles: [{ ...copy, title: 'Other profile post', date: '2026-12-01T10:07:00+05:30' }], photos: [], dates: ['2027-01-01'], generate });
+  assert.equal(rows.length, 1);
+  assert.notEqual(rows[0].text, copy.text);
+  assert.match(prompts[0], /Other profile post/);
+  assert.notEqual(rows[0].time, '10:07');
+});

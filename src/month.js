@@ -113,19 +113,20 @@ export function buildPrompt(biz, { count, avoidTitles, fixes = [], month }) {
 
 // generate(prompt) -> array of {topic,title,text}. Injected so tests run without an API.
 // Failed posts are sent back in the next request with their problems, up to `extraTries` extra calls.
-export async function generateMonth({ biz, existing, photos, dates, generate, batchSize = 10, extraTries = 6, log = () => {} }) {
+// otherProfiles: posts of the owner's other profiles; new posts must not be similar to those either.
+export async function generateMonth({ biz, existing, otherProfiles = [], photos, dates, generate, batchSize = 10, extraTries = 6, log = () => {} }) {
   const month = dates[0]?.slice(0, 7);
   const accepted = [];
   let fixes = [];
   const maxCalls = Math.ceil(dates.length / batchSize) + extraTries;
   for (let call = 0; call < maxCalls && accepted.length < dates.length; call++) {
     const count = Math.min(batchSize, dates.length - accepted.length);
-    const avoidTitles = [...existing, ...accepted].map(p => p.title).slice(-60);
+    const avoidTitles = [...otherProfiles.slice(-30), ...existing, ...accepted].map(p => p.title).slice(-80);
     const batch = await generate(buildPrompt(biz, { count, avoidTitles, fixes, month }));
     fixes = [];
     let got = 0;
     for (const p of (Array.isArray(batch) ? batch : []).slice(0, count)) {
-      const problems = postProblems(biz, p, [...existing, ...accepted]);
+      const problems = postProblems(biz, p, [...otherProfiles, ...existing, ...accepted]);
       if (problems.length) { fixes.push({ title: p.title, problems }); continue; }
       accepted.push(p); got++;
     }
@@ -135,7 +136,7 @@ export async function generateMonth({ biz, existing, photos, dates, generate, ba
   const r = biz.post_rules;
   const times = pickTimes(dates.slice(0, accepted.length), {
     window: r.time_window === 'fixed' ? '' : (r.time_window || DEFAULT_TIME_WINDOW), seed: biz.id, fallback: r.time,
-    avoid: existing.map(p => String(p.date).slice(11, 16)).filter(t => /^\d\d:\d\d$/.test(t)),
+    avoid: [...existing, ...otherProfiles].map(p => String(p.date).slice(11, 16)).filter(t => /^\d\d:\d\d$/.test(t)),
   });
   return accepted.map((p, i) => ({
     id: `${biz.id}-${dates[i].replace(/-/g, '')}`,
