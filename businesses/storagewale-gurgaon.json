@@ -1,0 +1,57 @@
+{
+  "id": "storagewale-gurgaon",
+  "name": "StorageWale",
+  "website": "https://www.storagewale.com/gurgaon/",
+  "phone": "+919467402292",
+  "whatsapp": "919467402292",
+  "email": "info@storagewale.com",
+  "address": "I Block, 134, Old Choma Road, New Palam Vihar, Sector 110, near Rakesh Cement and Building Material, Gurgaon 122017",
+  "primary_keyword": "household storage in Gurgaon",
+  "secondary_keyword": "storage services in Gurgaon",
+  "services": [
+    "household storage",
+    "furniture and personal storage",
+    "office storage",
+    "business storage",
+    "inventory storage",
+    "document and records storage",
+    "e-commerce seller storage"
+  ],
+  "areas": [
+    "Cyber City",
+    "Udyog Vihar",
+    "Golf Course Road",
+    "Golf Course Extension Road",
+    "Sohna Road",
+    "MG Road",
+    "DLF Phase 1",
+    "DLF Phase 5",
+    "Dwarka Expressway",
+    "New Palam Vihar",
+    "Sector 110",
+    "New Gurgaon",
+    "Old Gurgaon",
+    "Manesar",
+    "Gurgaon"
+  ],
+  "post_rules": {
+    "min_chars": 700,
+    "max_chars": 1000,
+    "length_tolerance": 10,
+    "max_similarity": 0.5,
+    "time": "11:00",
+    "tz": "Asia/Kolkata",
+    "cta": "call"
+  },
+  "widget": {
+    "heading": "Live Updates",
+    "city": "Gurgaon",
+    "accent": "",
+    "cols": 4,
+    "limit": 8
+  },
+  "whatsapp_text": "Hi! I saw your update and need storage in Gurgaon.",
+  "directions_url": "https://www.google.com/maps/search/?api=1&query=StorageWale%20I%20Block%2C%20134%2C%20Old%20Choma%20Road%2C%20New%20Palam%20Vihar%2C%20Sector%20110%2C%20near%20Rakesh%20Cement%20and%20Building%20Material%2C%20Gurgaon%20122017",
+  "category": "managed storage",
+  "plan": "5000"
+}

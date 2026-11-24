@@ -1,0 +1,54 @@
+{
+  "id": "storagewale-pune",
+  "name": "StorageWale",
+  "website": "https://www.storagewale.com/pune/",
+  "phone": "+917009920160",
+  "whatsapp": "917009920160",
+  "email": "info@storagewale.com",
+  "address": "Plot No. 78/A, Pathare Wasti, Lohegaon, near Shaurya Park, Pune 411047",
+  "primary_keyword": "household storage in Pune",
+  "secondary_keyword": "storage facility in Pune",
+  "services": [
+    "household storage",
+    "furniture and personal storage",
+    "office storage",
+    "business storage",
+    "inventory storage",
+    "document and records storage",
+    "e-commerce seller storage"
+  ],
+  "areas": [
+    "Hinjewadi",
+    "Wakad",
+    "Baner",
+    "Balewadi",
+    "Kharadi",
+    "Viman Nagar",
+    "Kalyani Nagar",
+    "Hadapsar",
+    "Magarpatta City",
+    "Pimpri-Chinchwad",
+    "Lohegaon",
+    "Pune"
+  ],
+  "post_rules": {
+    "min_chars": 700,
+    "max_chars": 1000,
+    "length_tolerance": 10,
+    "max_similarity": 0.5,
+    "time": "11:00",
+    "tz": "Asia/Kolkata",
+    "cta": "call"
+  },
+  "widget": {
+    "heading": "Live Updates",
+    "city": "Pune",
+    "accent": "",
+    "cols": 4,
+    "limit": 8
+  },
+  "whatsapp_text": "Hi! I saw your update and need storage in Pune.",
+  "directions_url": "https://www.google.com/maps/search/?api=1&query=StorageWale%20Plot%20No.%2078%2FA%2C%20Pathare%20Wasti%2C%20Lohegaon%2C%20near%20Shaurya%20Park%2C%20Pune%20411047",
+  "category": "managed storage",
+  "plan": "5000"
+}

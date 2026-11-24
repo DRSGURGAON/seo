@@ -1,0 +1,54 @@
+{
+  "id": "storagewale-bangalore",
+  "name": "StorageWale",
+  "website": "https://www.storagewale.com/bangalore/",
+  "phone": "+917676767570",
+  "whatsapp": "917676767570",
+  "email": "info@storagewale.com",
+  "address": "B-10, 4th Main Road, DDUTTL Suburb, Yeshwanthpur, Bangalore 560022",
+  "primary_keyword": "household storage services in Bangalore",
+  "secondary_keyword": "storage space in Bangalore",
+  "services": [
+    "household storage",
+    "furniture and personal storage",
+    "office storage",
+    "business storage",
+    "inventory storage",
+    "document and records storage",
+    "e-commerce seller storage"
+  ],
+  "areas": [
+    "Whitefield",
+    "Electronic City",
+    "HSR Layout",
+    "Koramangala",
+    "Indiranagar",
+    "Marathahalli",
+    "Bellandur",
+    "Sarjapur Road",
+    "Hebbal",
+    "Yelahanka",
+    "Yeshwanthpur",
+    "Bangalore"
+  ],
+  "post_rules": {
+    "min_chars": 700,
+    "max_chars": 1000,
+    "length_tolerance": 10,
+    "max_similarity": 0.5,
+    "time": "11:00",
+    "tz": "Asia/Kolkata",
+    "cta": "call"
+  },
+  "widget": {
+    "heading": "Live Updates",
+    "city": "Bangalore",
+    "accent": "",
+    "cols": 4,
+    "limit": 8
+  },
+  "whatsapp_text": "Hi! I saw your update and need storage in Bangalore.",
+  "directions_url": "https://www.google.com/maps/search/?api=1&query=StorageWale%20B-10%2C%204th%20Main%20Road%2C%20DDUTTL%20Suburb%2C%20Yeshwanthpur%2C%20Bangalore%20560022",
+  "category": "managed storage",
+  "plan": "5000"
+}
