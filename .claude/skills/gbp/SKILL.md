@@ -52,6 +52,8 @@ Gotchas: keystrokes typed right after the page loads can land in a cell; if a ce
 
 ## 5. Schedule in Localo
 
+Website-only business (no Google profile yet: `gbp_profile_url` and `localo_location` both empty, e.g. StorageWale today): skip this step and say so in the report; the posts still reach the website through step 4.
+
 Profile: `https://app.localo.com/place-place/<localo_location>/posts/scheduled`. If `localo_location` is empty, open https://app.localo.com, find the profile whose address matches the business, take the id from its URL (`/place-place/<id>/...`) and tell Pradeep to put it in the `localo_location` cell (do not write it yourself).
 
 Before posting, read what is already scheduled (JS on the Scheduled page, after it loads):
