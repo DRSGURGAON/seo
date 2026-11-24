@@ -1,0 +1,55 @@
+# Actions tab > "Generate month of blogs" > Run workflow. Needs the GEMINI_API_KEY repository secret.
+# Website-only blog articles (not GBP). The CSV is attached to the run as an artifact (not committed):
+# import it into the <id>_blogs tab of the Google Sheet, review, then run "Sync posts from Google Sheet".
+name: Generate month of blogs
+
+on:
+  workflow_dispatch:
+    inputs:
+      business:
+        description: Business id (file name in businesses/)
+        default: amex
+        required: true
+      month:
+        description: Month to fill, YYYY-MM (e.g. 2026-12)
+        required: true
+      count:
+        description: Optional number of blogs (default = blogs_per_month in the sheet, else 8)
+        required: false
+      from:
+        description: Optional first date YYYY-MM-DD
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Write blogs with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          BUSINESS: ${{ inputs.business }}
+          MONTH: ${{ inputs.month }}
+          COUNT: ${{ inputs.count }}
+          FROM: ${{ inputs.from }}
+        run: |
+          set -- "$BUSINESS" "$MONTH"
+          if [ -n "$COUNT" ]; then set -- "$@" --count "$COUNT"; fi
+          if [ -n "$FROM" ]; then set -- "$@" --from "$FROM"; fi
+          npm run blogs -- "$@"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.business }}-${{ inputs.month }}-blogs
+          path: out/${{ inputs.business }}/*.blogs.csv
+          if-no-files-found: warn

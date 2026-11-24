@@ -5,7 +5,7 @@ import { buildTemplate } from '../src/sheet.js';
 
 const read = p => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null);
 const profiles = readdirSync('businesses').filter(f => f.endsWith('.json'))
-  .map(f => { const biz = read(`businesses/${f}`); return { biz, feed: read(`out/${biz.id}/posts.json`) }; });
+  .map(f => { const biz = read(`businesses/${f}`); return { biz, feed: read(`out/${biz.id}/posts.json`), blogs: read(`out/${biz.id}/blogs.json`)?.blogs }; });
 
 // Profiles still to be filled in: rows are added with active = no so sync skips them until ready.
 const planned = [
