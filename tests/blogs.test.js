@@ -110,3 +110,12 @@ test('withRetry retries busy Gemini answers, not real errors', async () => {
   assert.equal(n, 3);
   await assert.rejects(withRetry(() => { throw Object.assign(new Error('bad key'), { status: 400 }); }, { wait: async () => {} }), /bad key/);
 });
+
+test('city-folder websites: sitemap from the domain root, blogs under the city', async () => {
+  const { blogPath } = await import('../src/blogs.js');
+  assert.equal(blogPath('https://www.storagewale.com/gurgaon/'), '/gurgaon/blogs/');
+  assert.equal(blogPath('https://americanpackersncr.in/'), '/blogs/');
+  const seen = [];
+  await fetchSitePages('https://x.in/pune/', async u => { seen.push(u); return { ok: false, text: async () => '' }; });
+  assert.equal(seen[0], 'https://x.in/sitemap-index.xml');
+});
