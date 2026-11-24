@@ -18,7 +18,7 @@ const firstSentences = (t, n = 2) => (String(t).match(/[^.!?]+[.!?]+/g) || [t]).
 export function buildPhotoPrompt(biz, post, feedback = '') {
   const month = post.date.slice(0, 7);
   return [
-    `A realistic, natural-looking photograph for a Google Business Profile post of a packers and movers company in ${biz.widget?.city || 'Gurgaon'}, India.`,
+    `A realistic, natural-looking photograph for a Google Business Profile post of a ${biz.category || 'packers and movers'} business in ${biz.widget?.city || 'Gurgaon'}, India.`,
     `The post is about: "${post.title}". ${firstSentences(post.text)}`,
     'Show the moving work itself: packed and labelled cartons, wrapped furniture, packing material, loading, or a home or apartment being shifted, in an Indian urban setting.',
     `Season: ${seasonFor(month)}. Natural daylight, clean and uncluttered, landscape 4:3.`,

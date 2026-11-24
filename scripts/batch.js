@@ -1,12 +1,13 @@
 // One-prompt GBP batch (used by the "gbp" Claude skill, .claude/skills/gbp/SKILL.md).
 //   node scripts/batch.js plan  <id> --count 30        next 30 free days after the last post in the sheet
-//   node scripts/batch.js plan  <id> --month 2027-01   the rest of that month
+//   node scripts/batch.js plan  <id> --month 2027-01   that month's quota from the business's plan (3500 = 20, 5000 = 30)
 //   node scripts/batch.js stage <id> <posts.json>      check a written batch and build the sheet/Localo files
 // Reads the live Google Sheet (GBP_SHEET_ID in .env or the environment). Writes only to out/<id>/batch/ (git-ignored).
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { loadWorkbook, parseWorkbook, postsTab, cellText } from '../src/sheet.js';
 import { planDates, planTimes, checkBatch, sheetRows, toTsv, localoBody, worstSimilarity } from '../src/batch.js';
 import { isOffer, seasonFor } from '../src/month.js';
+import { postsPerMonth } from '../src/plans.js';
 
 const args = process.argv.slice(2);
 const [cmd, id, file] = args.filter(a => !a.startsWith('--') && !/^\d+$/.test(a) && !/^\d{4}-\d{2}$/.test(a));
@@ -40,19 +41,22 @@ async function readSheet() {
   const posts = found.posts || [];
   const known = new Set(posts.map(p => p.title.trim().toLowerCase()));
   const existing = [...posts, ...raw.filter(r => !known.has(r.title.trim().toLowerCase()))];
-  return { biz: found.biz, existing, nextRow: lastRow + 1 };
+  const siblings = businesses.filter(b => b.biz.id !== id).flatMap(b => b.posts || []);
+  return { biz: found.biz, existing, siblings, nextRow: lastRow + 1 };
 }
 
 async function plan() {
   const count = Number(opt('--count')) || 0, month = opt('--month');
   if (!count && !month) throw new Error('Give --count N or --month YYYY-MM');
   const { biz, existing, nextRow } = await readSheet();
-  const dates = planDates({ existing, count, month, today: istToday() });
-  if (!dates.length) { console.log(`${id}: nothing to plan, ${month} is already covered.`); return; }
+  const perMonth = postsPerMonth(biz);
+  const dates = planDates({ existing, count, month, today: istToday(), perMonth });
+  if (!dates.length) { console.log(`${id}: nothing to plan, ${month} is already covered${perMonth ? ` (plan ${biz.plan}: ${perMonth} posts a month)` : ''}.`); return; }
   const times = planTimes(biz, dates, existing);
   const daily = existing.filter(p => !isOffer(p));
   const p = {
-    id, name: biz.name, localo_location: biz.localo_location || '', address: biz.address,
+    id, name: biz.name, category: biz.category || 'packers and movers', plan: biz.plan || '', posts_per_month: perMonth || 'daily',
+    localo_location: biz.localo_location || '', address: biz.address,
     primary_keyword: biz.primary_keyword, secondary_keyword: biz.secondary_keyword, services: biz.services, areas: biz.areas,
     rules: biz.post_rules, season: seasonFor(dates[0].slice(0, 7)),
     dates, times, nextRow, existing_count: existing.length, daily_count: daily.length,
@@ -62,7 +66,7 @@ async function plan() {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   writeFileSync(`${dir}/plan.json`, JSON.stringify(p, null, 2));
-  console.log(`${id} (${biz.name}): ${existing.length} posts in the sheet, last daily post ${p.last_post || 'none'}`);
+  console.log(`${id} (${biz.name}, ${p.category}, plan ${biz.plan || 'none'} = ${perMonth || 'daily'} posts/month): ${existing.length} posts in the sheet, last daily post ${p.last_post || 'none'}`);
   console.log(`plan: ${dates.length} posts ${dates[0]} .. ${dates.at(-1)}, sheet row ${nextRow} onwards -> ${dir}/plan.json`);
 }
 
@@ -70,9 +74,9 @@ async function stage() {
   if (!file || !existsSync(file)) throw new Error('Usage: node scripts/batch.js stage <id> <posts.json>');
   const p = JSON.parse(readFileSync(`${dir}/plan.json`, 'utf8'));
   const posts = JSON.parse(readFileSync(file, 'utf8'));
-  const { biz, existing, nextRow } = await readSheet();
+  const { biz, existing, siblings, nextRow } = await readSheet();
   if (nextRow !== p.nextRow) throw new Error(`The sheet changed since the plan (next row ${nextRow}, plan said ${p.nextRow}). Run plan again.`);
-  const problems = checkBatch(biz, existing, posts, p.dates);
+  const problems = checkBatch(biz, existing, posts, p.dates, siblings);
   if (problems.length) {
     problems.forEach(x => console.log(`PROBLEM ${x}`));
     console.log(`\n${problems.length} problem(s). Rewrite those posts and stage again. Nothing built.`);
@@ -87,7 +91,7 @@ async function stage() {
     return { n: i + 1, date: p.dates[i], time: p.times[i], title: post.title.trim(), chars: localoBody(post).length - 1, file: f };
   });
   writeFileSync(`${dir}/localo.json`, JSON.stringify(localo, null, 2));
-  const sim = worstSimilarity(existing, posts);
+  const sim = worstSimilarity([...existing, ...siblings], posts);
   localo.forEach((l, i) => console.log(`${String(l.n).padStart(2)} ${l.date} ${l.time} ${l.chars}ch sim ${sim[i].toFixed(2)}  ${l.title}`));
   console.log(`\nAll ${posts.length} posts pass. Paste ${dir}/sheet.tsv at A${p.nextRow} of ${postsTab(id)}; Localo list: ${dir}/localo.json`);
 }

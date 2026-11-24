@@ -18,6 +18,24 @@ test('planDates starts after the last daily post, ignores offers, never in the p
   assert.deepEqual(planDates({ existing, month: '2026-11', today: '2026-11-24' }), []);
 });
 
+test('plans: 3500 = 20 posts spread over the month, 5000 = daily, unknown plan is an error', async () => {
+  const { postsPerMonth } = await import('../src/plans.js');
+  assert.equal(postsPerMonth({ plan: '3500' }), 20);
+  assert.equal(postsPerMonth({ plan: 'Rs 5000' }), 30);
+  assert.equal(postsPerMonth({}), null);
+  assert.throws(() => postsPerMonth({ id: 'x', plan: '9999' }), /unknown plan/);
+  const jan = planDates({ existing: [], month: '2027-01', today: '2026-12-20', perMonth: 20 });
+  assert.equal(jan.length, 20);
+  assert.equal(jan[0], '2027-01-01');
+  assert.equal(new Set(jan).size, 20);
+  assert.ok(jan.every(d => d.startsWith('2027-01')));
+  const half = planDates({ existing: [{ date: '2027-01-05' }, { date: '2027-01-03' }], month: '2027-01', today: '2026-12-20', perMonth: 20 });
+  assert.equal(half.length, 18);
+  assert.ok(half[0] > '2027-01-05');
+  const next = planDates({ existing: [], count: 3, today: '2026-12-31', perMonth: 20 });
+  assert.deepEqual(next, ['2027-01-01', '2027-01-03', '2027-01-04']);
+});
+
 test('checkBatch rejects repeats of existing or batch posts and taken dates', () => {
   const old = { ...post('Old one', 'We pack kitchens with care and label every box by room.'), date: '2026-12-24T11:00:00+05:30' };
   const fresh = post('Office moves on weekends', 'Desks, files and servers are tagged and moved over a weekend so work resumes on Monday.');
@@ -28,6 +46,17 @@ test('checkBatch rejects repeats of existing or batch posts and taken dates', ()
   assert.match(probs[0], /too similar/);
   assert.match(probs[0], /title already used/);
   assert.match(probs[0], /already has a post/);
+});
+
+test('checkBatch also blocks copies of another business\'s posts (sibling city pages)', () => {
+  const gurgaon = { ...post('Storing a home between leases', 'We collect, catalogue and store the whole household until the new flat is ready.'), date: '2027-01-01' };
+  const pune = { ...gurgaon };
+  delete pune.date;
+  assert.deepEqual(checkBatch(biz, [], [pune], ['2027-01-01']), []);
+  const probs = checkBatch(biz, [], [pune], ['2027-01-01'], [gurgaon]);
+  assert.equal(probs.length, 1);
+  assert.match(probs[0], /too similar/);
+  assert.match(probs[0], /title already used/);
 });
 
 test('sheet rows and Localo body', () => {

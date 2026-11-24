@@ -10,7 +10,7 @@ export const BIZ_COLUMNS = [
   'active', 'id', 'name', 'website', 'phone', 'whatsapp', 'email', 'address', 'established', 'gbp_profile_url', 'instagram',
   'primary_keyword', 'secondary_keyword', 'services', 'areas', 'post_time', 'post_time_window', 'timezone', 'cta', 'min_chars', 'max_chars',
   'length_tolerance', 'max_similarity', 'widget_heading', 'widget_city', 'widget_accent', 'widget_cols', 'widget_limit',
-  'whatsapp_text', 'directions_url', 'localo_location',
+  'whatsapp_text', 'directions_url', 'localo_location', 'category', 'plan',
 ];
 export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes', 'type', 'offer_start', 'offer_end', 'banner'];
 export const POST_TYPES = ['post', 'offer'];
@@ -94,6 +94,7 @@ export function bizFromRow(d) {
       cols: num(d.widget_cols, 4), limit: num(d.widget_limit, 8),
     },
     whatsapp_text: t('whatsapp_text'), directions_url: t('directions_url'), localo_location: t('localo_location'),
+    category: t('category'), plan: t('plan'),
   };
   for (const k of Object.keys(biz)) if (biz[k] === '' || biz[k] === undefined) delete biz[k];
   return biz;
@@ -222,6 +223,7 @@ export function bizToRow(biz, header = {}) {
     widget_heading: w.heading, widget_city: w.city, widget_accent: w.accent, widget_cols: w.cols, widget_limit: w.limit,
     whatsapp_text: biz.whatsapp_text ?? (wa && new URL(wa.url).searchParams.get('text')) ?? '',
     directions_url: biz.directions_url ?? dir?.url ?? '', localo_location: biz.localo_location || '',
+    category: biz.category || '', plan: biz.plan || '',
   };
 }
 

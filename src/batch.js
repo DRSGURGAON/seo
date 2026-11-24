@@ -6,17 +6,31 @@ import { POST_COLUMNS } from './sheet.js';
 
 const day = d => String(d).slice(0, 10);
 
-// Next dates to fill: one daily post per day, starting the day after the last daily post (never before `today` + 1).
-// Give either `count` (that many days) or `month` (YYYY-MM, the rest of that month).
-export function planDates({ existing, count, month, today }) {
+// `n` dates spread evenly over `candidates` (first one always included).
+export function spreadDates(candidates, n) {
+  if (n >= candidates.length) return candidates.slice();
+  return Array.from({ length: n }, (_, i) => candidates[Math.floor((i * candidates.length) / n)]);
+}
+
+const addDays = (iso, k) => { let d = iso; for (let i = 0; i < k; i++) d = dayAfter(d); return d; };
+
+// Next dates to fill, starting the day after the last daily post (never before `today` + 1).
+// Give either `count` (that many posts) or `month` (YYYY-MM, the rest of that month).
+// `perMonth` (from the business's plan, e.g. 20) spreads the posts over the month instead of one per day;
+// for a month it is also the quota, minus the daily posts that month already has.
+export function planDates({ existing, count, month, today, perMonth = null }) {
   const daily = existing.filter(p => !isOffer(p)).map(p => day(p.date)).sort();
   const last = daily.at(-1);
   const tomorrow = dayAfter(today);
-  let from = last && dayAfter(last) > tomorrow ? dayAfter(last) : tomorrow;
-  if (month) return monthDates(month, from);
-  const out = [];
-  for (let i = 0; i < count; i++) { out.push(from); from = dayAfter(from); }
-  return out;
+  const from = last && dayAfter(last) > tomorrow ? dayAfter(last) : tomorrow;
+  if (month) {
+    const free = monthDates(month, from);
+    if (!perMonth) return free;
+    const already = daily.filter(d => d.startsWith(month)).length;
+    return spreadDates(free, Math.max(0, Math.min(perMonth - already, free.length)));
+  }
+  const step = perMonth && perMonth < 30 ? 30 / perMonth : 1;
+  return Array.from({ length: count }, (_, i) => addDays(from, Math.round(i * step)));
 }
 
 // A posting time per date, using the business's own window rule (same as the month generator).
@@ -29,13 +43,14 @@ export function planTimes(biz, dates, existing) {
 }
 
 // Problems per new post: the month generator's rules plus no repeated title, checked against existing posts AND earlier posts of this batch.
-export function checkBatch(biz, existing, posts, dates) {
+// `siblings` = posts of every other business in the sheet (e.g. the other StorageWale cities): text and titles must not repeat there either; their dates don't matter.
+export function checkBatch(biz, existing, posts, dates, siblings = []) {
   const problems = [];
   if (posts.length !== dates.length) problems.push(`batch has ${posts.length} posts but ${dates.length} dates are planned`);
   const used = new Set(existing.map(p => p.date && day(p.date)));
-  const titles = new Set(existing.map(p => p.title.trim().toLowerCase()));
+  const titles = new Set([...existing, ...siblings].map(p => p.title.trim().toLowerCase()));
   posts.forEach((p, i) => {
-    const others = [...existing, ...posts.slice(0, i)];
+    const others = [...existing, ...siblings, ...posts.slice(0, i)];
     const probs = postProblems(biz, p, others);
     if (titles.has(p.title.trim().toLowerCase())) probs.push('title already used');
     titles.add(p.title.trim().toLowerCase());

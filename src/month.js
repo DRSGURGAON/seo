@@ -93,7 +93,7 @@ export function buildPrompt(biz, { count, avoidTitles, fixes = [], month }) {
   const r = biz.post_rules;
   const when = month ? `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}` : '';
   return [
-    `Write ${count} Google Business Profile posts for "${biz.name}", a packers and movers company in ${biz.widget?.city || 'Gurgaon'} (established ${biz.established}).`,
+    `Write ${count} Google Business Profile posts for "${biz.name}", a ${biz.category || 'packers and movers'} business in ${biz.widget?.city || 'Gurgaon'} (established ${biz.established}).`,
     `Services: ${biz.services.join(', ')}. Areas served: ${biz.areas.join(', ')}.`,
     when ? `These posts go live in ${when}, in ${seasonFor(month)}. Any weather or seasonal angle must match that season.` : '',
     '',
