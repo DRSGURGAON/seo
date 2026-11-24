@@ -1,0 +1,53 @@
+# One night, on GitHub's servers (Pradeep's laptop can be off): write the December 2026 website blogs for the
+# StorageWale cities ONE AFTER ANOTHER (Gurgaon, then Pune, then Bangalore). When Gemini is busy or over its limit,
+# wait 30 minutes and fill only the missing blogs, up to 3 tries per city. The CSVs are attached to the run
+# (Artifacts) for import into the <id>_blogs tabs of the sheet. Delete this file after that night.
+name: Night blogs (StorageWale, one time)
+
+on:
+  schedule:
+    - cron: '30 20 24 11 *' # 24 Nov 20:30 UTC = 25 Nov 02:00 IST (GitHub may start it a little late)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: night-blogs
+  cancel-in-progress: false
+
+jobs:
+  blogs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Write blogs, one city at a time
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
+        run: |
+          status=0
+          for id in storagewale-gurgaon storagewale-pune storagewale-bangalore; do
+            for try in 1 2 3; do
+              echo "::group::$id, try $try"
+              if npm run blogs -- "$id" 2026-12; then echo "::endgroup::"; break; fi
+              echo "::endgroup::"
+              if [ "$try" = 3 ]; then echo "::warning::$id still has missing blogs after 3 tries"; status=1; break; fi
+              echo "$id: waiting 30 minutes before filling the missing blogs"
+              sleep 1800
+            done
+          done
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: storagewale-2026-12-blogs
+          path: out/storagewale-*/2026-12.blogs.csv
+          if-no-files-found: warn

@@ -91,27 +91,54 @@ export function buildBlogPrompt(biz, { month, avoid = [], sitePages = [], fix = 
 export async function generateBlogs({ biz, existing = [], dates, photos = [], sitePages = [], generate, triesPerBlog = 3, log = () => {} }) {
   const taken = new Set(sitePages.map(s => s.split('/').pop()));
   const accepted = [];
+  let stopped = '';
   for (const date of dates) {
+    if (stopped) break;
     let fix = null, ok = null;
     for (let t = 0; t < triesPerBlog && !ok; t++) {
       const others = [...existing, ...accepted];
-      const b = await generate(buildBlogPrompt(biz, { month: date.slice(0, 7), avoid: others.map(o => `${o.title} (keyword: ${o.keyword})`).slice(-60), sitePages, fix }));
+      let b;
+      // Gemini still down after all retries/fallbacks: keep the blogs written so far instead of losing them.
+      try { b = await generate(buildBlogPrompt(biz, { month: date.slice(0, 7), avoid: others.map(o => `${o.title} (keyword: ${o.keyword})`).slice(-60), sitePages, fix })); } catch (e) {
+        stopped = e.message; log(`  ${date}: stopped, ${e.message}`); break;
+      }
       const blog = { ...b, slug: slugify(b.slug || b.title || ''), title: String(b.title || '').trim(), description: String(b.description || '').trim(), body: String(b.body || '').trim(), keyword: String(b.keyword || '').trim() };
       const problems = blogProblems(biz, blog, others, taken);
       if (problems.length) { fix = { title: blog.title, problems }; log(`  ${date}: attempt ${t + 1} rejected (${problems.join('; ')})`); continue; }
       ok = blog;
     }
-    if (!ok) { log(`  ${date}: no acceptable blog after ${triesPerBlog} attempts, skipped`); continue; }
+    if (!ok) { if (!stopped) log(`  ${date}: no acceptable blog after ${triesPerBlog} attempts, skipped`); continue; }
     accepted.push({ ...ok, date });
     log(`  ${date}: "${ok.title}" (${wordCount(ok.body)} words)`);
   }
   // Rotate photos, continuing after the last photo an existing blog used.
   const lastImg = existing.at(-1)?.image;
   const start = photos.length ? (photos.findIndex(p => p.id === lastImg || p.url === lastImg) + 1) % photos.length : 0;
-  return accepted.map((b, i) => ({
+  const rows = accepted.map((b, i) => ({
     id: `${biz.id}-blog-${b.date.replace(/-/g, '')}`, date: b.date, slug: b.slug, title: b.title, description: b.description, keyword: b.keyword,
     body: b.body, image: photos.length ? photos[(start + i) % photos.length].id : '', status: 'scheduled', words: wordCount(b.body), notes: 'gemini',
   }));
+  if (stopped) rows.stopped = stopped;
+  return rows;
+}
+
+// RFC 4180 CSV (quoted fields may hold commas, quotes and newlines) -> array of objects keyed by the header row.
+export function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', q = false;
+  const s = String(text).replace(/^﻿/, '');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) {
+      if (c === '"' && s[i + 1] === '"') { field += '"'; i++; } else if (c === '"') q = false; else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && s[i + 1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  const [head, ...body] = rows.filter(r => r.some(v => v !== ''));
+  return head ? body.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? '']))) : [];
 }
 
 // Page slugs that already exist on the website, read from its sitemap (best effort: [] if anything fails).

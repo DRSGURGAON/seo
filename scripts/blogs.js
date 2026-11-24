@@ -5,7 +5,7 @@
 // Writes out/<id>/<YYYY-MM>.blogs.csv (gitignored). Import it into <id>_blogs, review, then `npm run sync`.
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { geminiJson } from '../src/gemini.js';
-import { generateBlogs, spreadDates, blogsPerMonth, fetchSitePages, BLOG_SCHEMA, blogSummary } from '../src/blogs.js';
+import { generateBlogs, spreadDates, blogsPerMonth, fetchSitePages, BLOG_SCHEMA, blogSummary, parseCsv } from '../src/blogs.js';
 import { toCsv } from '../src/month.js';
 import { BLOG_COLUMNS } from '../src/sheet.js';
 
@@ -24,22 +24,27 @@ async function main() {
   const existing = read(`out/${id}/blogs.json`)?.blogs || [];
   const photos = read(`out/${id}/photos.json`) || [];
   const count = opt('--count') ? Number(opt('--count')) : blogsPerMonth(biz);
-  const dates = spreadDates(month, count, opt('--from'));
-  if (!dates.length) { console.log(`${id}: no blog dates for ${month} (count ${count}).`); return; }
+  const allDates = spreadDates(month, count, opt('--from'));
+  // Resume: blogs already in this month's CSV (from an earlier, half-finished run) are kept and not written again.
+  const file = `out/${id}/${month}.blogs.csv`;
+  const done = existsSync(file) ? parseCsv(readFileSync(file, 'utf8')).filter(r => r.date && r.body) : [];
+  const dates = allDates.filter(d => !done.some(r => r.date === d));
+  if (!dates.length) { console.log(`${id}: ${done.length ? `all ${done.length} blogs for ${month} already in ${file}` : `no blog dates for ${month} (count ${count})`}.`); return; }
 
   const sitePages = await fetchSitePages(biz.website);
-  console.log(`${id}: ${dates.length} blogs for ${dates.join(', ')} with ${model} (${sitePages.length} existing website pages avoided, ${existing.length} earlier blogs)`);
+  console.log(`${id}: ${dates.length} blogs for ${dates.join(', ')} with ${model} (${sitePages.length} existing website pages avoided, ${existing.length} earlier blogs${done.length ? `, ${done.length} already in ${file}` : ''})`);
   const rows = await generateBlogs({
-    biz, existing, photos, sitePages, dates, log: console.log,
+    biz, existing: [...existing, ...done], photos, sitePages, dates, log: console.log,
     generate: prompt => geminiJson({ apiKey, model, prompt, schema: BLOG_SCHEMA, temperature: 0.8 }),
   });
   mkdirSync(`out/${id}`, { recursive: true });
-  const file = `out/${id}/${month}.blogs.csv`;
-  writeFileSync(file, toCsv(rows, BLOG_COLUMNS));
-  console.log(`\n${rows.length}/${dates.length} blogs passed the checks -> ${file}`);
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, blogSummary(rows, { id, month }));
-  if (rows.length < dates.length) {
-    console.log(`${dates.length - rows.length} blog(s) missing after retries: run again with --count ${dates.length - rows.length}`);
+  const all = [...done, ...rows].sort((a, b) => a.date.localeCompare(b.date));
+  writeFileSync(file, toCsv(all, BLOG_COLUMNS));
+  const have = allDates.filter(d => all.some(r => r.date === d)).length;
+  console.log(`\n${rows.length}/${dates.length} new blogs passed the checks, ${have}/${allDates.length} for ${month} in total -> ${file}`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, blogSummary(all, { id, month }));
+  if (have < allDates.length) {
+    console.log(`${allDates.length - have} blog(s) still missing${rows.stopped ? ' (Gemini unavailable)' : ''}: run the same command again to fill only those.`);
     process.exitCode = 1;
   }
 }
