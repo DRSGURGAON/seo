@@ -101,3 +101,12 @@ test('sheet: no _blogs tab means blogs stay null (blogs.json untouched)', async 
   assert.equal(businesses[0].blogs, null);
   assert.equal(slugify('2BHK Shifting: Cost & Tips!'), '2bhk-shifting-cost-and-tips');
 });
+
+test('withRetry retries busy Gemini answers, not real errors', async () => {
+  const { withRetry } = await import('../src/gemini.js');
+  let n = 0;
+  const busy = () => { n++; if (n < 3) throw Object.assign(new Error('503'), { status: 503 }); return 'ok'; };
+  assert.equal(await withRetry(busy, { wait: async () => {} }), 'ok');
+  assert.equal(n, 3);
+  await assert.rejects(withRetry(() => { throw Object.assign(new Error('bad key'), { status: 400 }); }, { wait: async () => {} }), /bad key/);
+});
