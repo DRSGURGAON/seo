@@ -1,0 +1,58 @@
+{
+  "id": "amex81",
+  "name": "American Express Packers And Movers",
+  "website": "https://americanpackersncr.in/sec-1-packers-movers-gurgaon/",
+  "phone": "+919008590012",
+  "whatsapp": "919008590012",
+  "email": "americanpackersncr@gmail.com",
+  "address": "Shop No 22, Sector 81, Gurugram, Haryana 122012",
+  "established": 2016,
+  "gbp_profile_url": "https://www.google.com/maps?cid=8183579467764390471",
+  "instagram": "https://www.instagram.com/packersmoversingurgaon/",
+  "primary_keyword": "packers and movers in Gurugram",
+  "secondary_keyword": "movers and packers in Gurugram",
+  "services": [
+    "house shifting",
+    "office relocation",
+    "car and bike transport",
+    "storage and warehousing",
+    "transit insurance",
+    "defence relocation"
+  ],
+  "areas": [
+    "Sector 81",
+    "Sector 82",
+    "Sector 83",
+    "Sector 84",
+    "Sector 85",
+    "Sector 86",
+    "Sector 89",
+    "Sector 90",
+    "Sector 92",
+    "Sector 95",
+    "New Gurgaon",
+    "Dwarka Expressway",
+    "Manesar",
+    "Delhi",
+    "Noida"
+  ],
+  "post_rules": {
+    "min_chars": 700,
+    "max_chars": 1000,
+    "length_tolerance": 10,
+    "max_similarity": 0.5,
+    "time": "11:00",
+    "tz": "Asia/Kolkata",
+    "cta": "call"
+  },
+  "widget": {
+    "heading": "Live Updates",
+    "city": "Gurgaon",
+    "accent": "#9b1c2c",
+    "cols": 4,
+    "limit": 8
+  },
+  "whatsapp_text": "Hi! I saw your update and need a moving quote.",
+  "directions_url": "https://www.google.com/maps/search/?api=1&query=American+Express+Packers+And+Movers+Shop+No+22+Sector+81+Gurugram",
+  "localo_location": "gGiNROLlQr9m7PH7mIQCaA"
+}
