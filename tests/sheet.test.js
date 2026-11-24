@@ -68,3 +68,12 @@ test('offer rows keep type and dates, share a day with a daily post, and bad off
   assert.deepEqual([offer.offer_start, offer.offer_end, offer.id], ['2026-11-16', '2026-11-25', `amex-offer-${day.replace(/-/g, '')}`]);
   assert.equal(posts.find(p => p.type !== 'offer').type, undefined);
 });
+
+test('a heading row pasted by a CSV "Append" import is skipped, not an error', async () => {
+  const wb = buildTemplate([{ biz, feed: { posts: feed.posts.slice(0, 1) } }]);
+  wb.getWorksheet(postsTab('amex')).addRow({ id: 'id', date: 'date', time: 'time', title: 'title', text: 'text' });
+  const { businesses, errors, warnings } = parseWorkbook(await roundTrip(wb));
+  assert.deepEqual(errors, []);
+  assert.equal(businesses[0].posts.length, 1);
+  assert.match(warnings.join('\n'), /heading row/);
+});

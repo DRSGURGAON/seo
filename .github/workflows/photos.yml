@@ -1,5 +1,5 @@
-# Actions tab > "Generate AI photos" > Run workflow. Needs the GEMINI_API_KEY secret and GBP_SHEET_ID.
-# Draws a photo for each upcoming post without one, commits the photos to photos/ai/ on main (so the
+# Actions tab > "Generate AI photos" > Run workflow. Needs GBP_SHEET_ID (and the GEMINI_API_KEY secret for source = gemini).
+# Makes a photo (own photo from the Photos tab, or Gemini) for each upcoming post without one; offers get a banner; commits the photos to photos/ on main (so the
 # sheet can preview them) and out/<id>/photo-review.csv. Import that CSV into the AI_Photos tab (Append),
 # approve or reject each photo, then run "Sync posts from Google Sheet".
 name: Generate AI photos
@@ -17,6 +17,12 @@ on:
         required: true
         type: choice
         options: [offer, post, all]
+      source:
+        description: Photo source (pool = your own photos from the Photos tab, gemini = AI, needs Gemini billing)
+        default: pool
+        required: true
+        type: choice
+        options: [pool, gemini]
       limit:
         description: Max photos this run
         default: '10'
@@ -49,7 +55,8 @@ jobs:
           BUSINESS: ${{ inputs.business }}
           ONLY: ${{ inputs.only }}
           LIMIT: ${{ inputs.limit }}
-        run: npm run photos -- "$BUSINESS" --only "$ONLY" --limit "$LIMIT"
+          SOURCE: ${{ inputs.source }}
+        run: npm run photos -- "$BUSINESS" --only "$ONLY" --source "$SOURCE" --limit "$LIMIT"
       - name: Commit photos
         if: always()
         run: |

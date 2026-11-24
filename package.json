@@ -12,6 +12,7 @@
     "photos": "node scripts/photos.js"
   },
   "dependencies": {
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "sharp": "^0.34.4"
   }
 }

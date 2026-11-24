@@ -12,7 +12,7 @@ export const BIZ_COLUMNS = [
   'length_tolerance', 'max_similarity', 'widget_heading', 'widget_city', 'widget_accent', 'widget_cols', 'widget_limit',
   'whatsapp_text', 'directions_url', 'localo_location',
 ];
-export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes', 'type', 'offer_start', 'offer_end'];
+export const POST_COLUMNS = ['id', 'date', 'time', 'title', 'text', 'image', 'cta', 'status', 'chars', 'notes', 'type', 'offer_start', 'offer_end', 'banner'];
 export const POST_TYPES = ['post', 'offer'];
 export const PHOTO_COLUMNS = ['business_id', 'photo_id', 'url', 'alt', 'last_used'];
 const REQUIRED_BIZ = ['id', 'name', 'phone', 'primary_keyword', 'secondary_keyword', 'min_chars', 'max_chars', 'max_similarity'];
@@ -128,7 +128,7 @@ export function parseWorkbook(wb) {
   const aiWs = wb.getWorksheet(AI_TAB);
   if (aiWs) for (const { data } of readTab(aiWs)) {
     const bid = cellText(data.business_id), pid = cellText(data.post_id), url = cellText(data.url);
-    if (!bid || !pid || !url) continue;
+    if (!bid || !pid || !url || url === 'url') continue;
     (aiBy[bid] ||= []).push({ post_id: pid, url, status: aiStatus(cellText(data.status)), notes: cellText(data.notes) });
   }
 
@@ -157,6 +157,7 @@ export function parseWorkbook(wb) {
       const at = `${postsTab(biz.id)} row ${rn}`;
       const title = cellText(p.title), text = cellText(p.text), status = cellText(p.status).toLowerCase() || 'scheduled';
       if (!title && !text && !cellText(p.date)) continue;
+      if (title.toLowerCase() === 'title' && cellText(p.date).toLowerCase() === 'date') { warnings.push(`${at}: heading row from a CSV import skipped (you can delete it)`); continue; }
       if (status === 'draft' || status === 'skip') { drafts++; continue; }
       const date = parseDate(p.date), time = cellText(p.time) ? parseTime(p.time) : biz.post_rules.time;
       if (!date) { errors.push(`${at}: date "${cellText(p.date)}" not understood (use 2026-12-25 or 25/12/2026)`); continue; }
@@ -169,7 +170,7 @@ export function parseWorkbook(wb) {
         const end = parseDate(p.offer_end), start = cellText(p.offer_start) ? parseDate(p.offer_start) : date;
         if (!end || !start) { errors.push(`${at}: offer needs offer_end (and offer_start if filled) as 2026-12-25 or 25/12/2026`); continue; }
         if (end < start || end < date) { errors.push(`${at}: offer_end ${end} is before the start or the post date`); continue; }
-        offer = { type, offer_start: start, offer_end: end };
+        offer = { type, offer_start: start, offer_end: end, ...(cellText(p.banner) ? { banner: cellText(p.banner) } : {}) };
       }
       const id = cellText(p.id) || `${biz.id}-${type === 'offer' ? 'offer-' : ''}${date.replace(/-/g, '')}`;
       if (ids.has(id)) { errors.push(`${at}: id "${id}" used twice`); continue; }
@@ -240,12 +241,14 @@ export function buildTemplate(profiles) {
     '   Ek din me 2 post (jaise offer + daily) ho sakte hain, bas time alag ho.',
     '   type: khali/post = roz wala post. offer = offer post: offer_end bharo (offer_start khali = post ki date).',
     '   Website par offer post offer_end ke baad apne aap chhup jata hai.',
+    '   banner (sirf offer): photo par likhne wali line, jaise 10% OFF LOCAL SHIFTING. Khali = text se apne aap.',
     '   status: draft = website/Localo me nahi jayega. scheduled / posted = jayega.',
     '   image: Photos tab ka photo_id (jaise p01) ya poora URL.',
     '   chars: apne aap ginta hai (title + text). Laal ho to length theek karo.',
     '   id khali chhod sakte ho, sync khud bana dega.',
     'Photos: sab companies ki photos. business_id = Businesses tab ka id.',
-    'AI_Photos: Gemini ki banayi photos. "Generate AI photos" Action ki photo-review.csv yahan import karo (Append).',
+    'AI_Photos: "Generate AI photos" Action ki photos (apni photo ya Gemini; offer par banner). photo-review.csv yahan import karo.',
+    '   Import: File > Import > Upload > "Append to current sheet". Upar wali heading row aaye to wo row delete karo.',
     '   status: approve = sync us post par photo laga dega. reject + notes = agli baar Gemini nayi photo banayega.',
     '   khali status = abhi review baaki.',
     '',
@@ -264,7 +267,7 @@ export function buildTemplate(profiles) {
     (feed?.posts || []).forEach(p => {
       if (p.image && !ids.has(p.image)) ids.set(p.image, `p${pad(ids.size + 1)}`);
       ws.addRow({ id: p.id, date: p.date.slice(0, 10), time: p.date.slice(11, 16), title: p.title, text: p.text, image: ids.get(p.image) || '', cta: p.cta, status: 'scheduled',
-        type: p.type || '', offer_start: p.offer_start || '', offer_end: p.offer_end || '' });
+        type: p.type || '', offer_start: p.offer_start || '', offer_end: p.offer_end || '', banner: p.banner || '' });
     });
     for (const [url, id] of ids) photoRows.push({ business_id: biz.id, photo_id: id, url, alt: '', last_used: '' });
 

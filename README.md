@@ -50,7 +50,11 @@ Without a computer: add the key as a repository secret (Settings > Secrets and v
 ## AI photos (Gemini) with approval
 
 For upcoming posts with an empty `image`:
-1. Actions > **Generate AI photos** > Run workflow (business `amex`, which = `offer` / `post` / `all`). Gemini draws one photo per post (no text, logos, branded trucks or faces); the photos are committed to `photos/ai/` and the list to `out/<id>/photo-review.csv` (also under the run's Artifacts; the run's Summary page shows the photos).
+1. Actions > **Generate AI photos** > Run workflow (business `amex`, which = `offer` / `post` / `all`, source = `pool` or `gemini`).
+   - `pool`: uses your own photos from the Photos tab (free, best for Google).
+   - `gemini`: Gemini draws one photo per post (no text, logos, branded trucks or faces). Image models have no free quota: the Gemini key needs billing on in Google AI Studio.
+   - Offer posts get a banner in the brand colour drawn by code: headline from the `banner` cell or from the offer text ("10% OFF LOCAL SHIFTING"), the validity dates and the business name.
+   The photos are committed to `photos/` and the list to `out/<id>/photo-review.csv` (also under the run's Artifacts; the run's Summary page shows the photos).
 2. In the sheet: a tab named `AI_Photos`. First time: File > Import > Upload the CSV > "Replace current sheet"; later runs: "Append to current sheet". The `preview` column shows each photo.
 3. `status`: `approve`, or `reject` with what to change in `notes`. Run step 1 again to redo rejected ones.
 4. Run **Sync posts from Google Sheet**: approved photos go on their posts (and the website). Upload the same photo (the `url`) to Localo for the Google post.
