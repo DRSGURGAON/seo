@@ -43,13 +43,14 @@ export function planTimes(biz, dates, existing) {
 }
 
 // Problems per new post: the month generator's rules plus no repeated title, checked against existing posts AND earlier posts of this batch.
-export function checkBatch(biz, existing, posts, dates) {
+// `siblings` = posts of every other business in the sheet (e.g. the other StorageWale cities): text and titles must not repeat there either; their dates don't matter.
+export function checkBatch(biz, existing, posts, dates, siblings = []) {
   const problems = [];
   if (posts.length !== dates.length) problems.push(`batch has ${posts.length} posts but ${dates.length} dates are planned`);
   const used = new Set(existing.map(p => p.date && day(p.date)));
-  const titles = new Set(existing.map(p => p.title.trim().toLowerCase()));
+  const titles = new Set([...existing, ...siblings].map(p => p.title.trim().toLowerCase()));
   posts.forEach((p, i) => {
-    const others = [...existing, ...posts.slice(0, i)];
+    const others = [...existing, ...siblings, ...posts.slice(0, i)];
     const probs = postProblems(biz, p, others);
     if (titles.has(p.title.trim().toLowerCase())) probs.push('title already used');
     titles.add(p.title.trim().toLowerCase());

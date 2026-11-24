@@ -41,7 +41,8 @@ async function readSheet() {
   const posts = found.posts || [];
   const known = new Set(posts.map(p => p.title.trim().toLowerCase()));
   const existing = [...posts, ...raw.filter(r => !known.has(r.title.trim().toLowerCase()))];
-  return { biz: found.biz, existing, nextRow: lastRow + 1 };
+  const siblings = businesses.filter(b => b.biz.id !== id).flatMap(b => b.posts || []);
+  return { biz: found.biz, existing, siblings, nextRow: lastRow + 1 };
 }
 
 async function plan() {
@@ -73,9 +74,9 @@ async function stage() {
   if (!file || !existsSync(file)) throw new Error('Usage: node scripts/batch.js stage <id> <posts.json>');
   const p = JSON.parse(readFileSync(`${dir}/plan.json`, 'utf8'));
   const posts = JSON.parse(readFileSync(file, 'utf8'));
-  const { biz, existing, nextRow } = await readSheet();
+  const { biz, existing, siblings, nextRow } = await readSheet();
   if (nextRow !== p.nextRow) throw new Error(`The sheet changed since the plan (next row ${nextRow}, plan said ${p.nextRow}). Run plan again.`);
-  const problems = checkBatch(biz, existing, posts, p.dates);
+  const problems = checkBatch(biz, existing, posts, p.dates, siblings);
   if (problems.length) {
     problems.forEach(x => console.log(`PROBLEM ${x}`));
     console.log(`\n${problems.length} problem(s). Rewrite those posts and stage again. Nothing built.`);
@@ -90,7 +91,7 @@ async function stage() {
     return { n: i + 1, date: p.dates[i], time: p.times[i], title: post.title.trim(), chars: localoBody(post).length - 1, file: f };
   });
   writeFileSync(`${dir}/localo.json`, JSON.stringify(localo, null, 2));
-  const sim = worstSimilarity(existing, posts);
+  const sim = worstSimilarity([...existing, ...siblings], posts);
   localo.forEach((l, i) => console.log(`${String(l.n).padStart(2)} ${l.date} ${l.time} ${l.chars}ch sim ${sim[i].toFixed(2)}  ${l.title}`));
   console.log(`\nAll ${posts.length} posts pass. Paste ${dir}/sheet.tsv at A${p.nextRow} of ${postsTab(id)}; Localo list: ${dir}/localo.json`);
 }

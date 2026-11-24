@@ -48,6 +48,17 @@ test('checkBatch rejects repeats of existing or batch posts and taken dates', ()
   assert.match(probs[0], /already has a post/);
 });
 
+test('checkBatch also blocks copies of another business\'s posts (sibling city pages)', () => {
+  const gurgaon = { ...post('Storing a home between leases', 'We collect, catalogue and store the whole household until the new flat is ready.'), date: '2027-01-01' };
+  const pune = { ...gurgaon };
+  delete pune.date;
+  assert.deepEqual(checkBatch(biz, [], [pune], ['2027-01-01']), []);
+  const probs = checkBatch(biz, [], [pune], ['2027-01-01'], [gurgaon]);
+  assert.equal(probs.length, 1);
+  assert.match(probs[0], /too similar/);
+  assert.match(probs[0], /title already used/);
+});
+
 test('sheet rows and Localo body', () => {
   const rows = sheetRows(biz, [post('A\ttitle', 'x')], ['2026-12-25'], ['11:00'], 32);
   assert.equal(rows[0].chars, '=IF(E32="","",LEN(D32)+1+LEN(E32))');
