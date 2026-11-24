@@ -37,11 +37,12 @@ It checks every post against everything already in the sheet and the rest of the
 ## 3. Add the posts to the sheet
 
 1. Built-in browser: open `https://docs.google.com/spreadsheets/d/<GBP_SHEET_ID>/edit`, click the `<id>_posts` tab.
-2. Click the Name box (top-left, shows a cell like A1; check with a zoom that it is focused), type `A<nextRow>` and Enter. Confirm the Name box shows that cell and the row is empty.
-3. PowerShell: `Get-Content -Raw -Encoding UTF8 out/<id>/batch/sheet.tsv | Set-Clipboard`, then ctrl+v in the sheet.
-4. Check: `npm run sync -- --dry` must show `<id>: <old + new> posts, 0 problem(s)`. If not, ctrl+z in the sheet, find the cause, redo.
+   The signed-in Google account needs Editor access ("View only" badge = no access: stop and ask Pradeep to share the sheet with that account as Editor).
+2. Click the Name box (top-left, shows a cell like A1; check with a zoom that it is focused), type `B<nextRow>` (type, then press Enter as a separate key) and confirm the Name box shows that cell and the row is empty.
+3. The built-in browser does not paste the system clipboard, so type the rows from `sheet.tsv` cell by cell: for every cell press **F2** first, then type, then **Tab** to the next column (without F2 the keystrokes are lost). Columns: date, time, title, text, image (skip with a Tab), cta, status, chars (the formula from sheet.tsv), notes; **Enter** after notes goes to column B of the next row. Max 25 actions per browser batch, so one row per batch.
+4. Check: `npm run sync -- --dry` must show `<id>: <old + new> posts, 0 problem(s)`, and the last posts' title/text must equal posts.json. If not, ctrl+z in the sheet, find the cause, redo.
 
-Gotchas: keystrokes typed right after the page loads can land in a cell; if a cell changed by accident, ctrl+z at once and verify. Dates paste as YYYY-MM-DD, the chars column is a formula.
+Gotchas: keystrokes typed right after the page loads can land in a cell; if a cell changed by accident, ctrl+z at once and verify. Dates go in as YYYY-MM-DD, the chars column is a formula.
 
 ## 4. Website sync
 
@@ -57,10 +58,12 @@ Before posting, read what is already scheduled (JS on the Scheduled page, after 
 ```
 Skip every planned date that already has a post there (never two posts on one day). Count the photos once: Content > Photos, or the "Select from your published photos" picker. Photo for post n = picker photo number `(daily_count + n - 1) % photo_count` (rotation, row by row, left to right).
 
+Click by `find` refs (Create post, Manually, Select date, Select time, "Your post appears here", Select from your published photos, Use this photo, the combobox), not fixed coordinates: the pane size changes the layout. The dialog is one column in a narrow pane; check the post with JS instead of the preview: `const d=document.querySelector('[role=dialog]'); [...d.querySelectorAll('input')].map(i=>i.value)` (date, time), `/Call now/.test(d.innerText)`, the `NNN / 1500` counter, and `d.querySelectorAll('img').length` > 0.
+
 For each remaining post in `localo.json`, in order:
 1. Click **Create post**, wait 3 s, scroll the dialog to the top (it reopens at the last scroll position).
 2. Click **Manually** (date and time). In the date box select all and type `YYYY-MM-DD`, Enter. In the time box select all, type `HH:MM`, click the picker's **OK** (wait 1 s, it may need a second click).
-3. In "Generate content" click **Manual**. Put the text of `NN.txt` in "Your post appears here": `Get-Content -Raw -Encoding UTF8 <file> | Set-Clipboard`, click the box, ctrl+v (or form_input with the file text). The counter must show the post's `chars`.
+3. In "Generate content" click **Manual**. Put the text of `NN.txt` in "Your post appears here" with **form_input** on that textbox (title, newline, text; clipboard paste does not work in the built-in browser). The counter must show the post's `chars`.
 4. Scroll the dialog fully down, click **Select from your published photos**, click the photo, wait 1 s, click **Use this photo**. If the picker did not open, do not click where "Use this photo" would be: that spot is the Schedule button.
 5. Scroll fully down, set the call-to-action dropdown to **Call now**.
 6. Verify before scheduling (zoom/screenshot): preview shows the photo and "Call now", the date box and time box show the planned values. Fix anything wrong first.
