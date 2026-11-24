@@ -64,8 +64,8 @@ export async function addBanner(input, { headline, sub, brand, color = '#9b1c2c'
   </defs>
   <rect x="0" y="${H * 0.5}" width="${W}" height="${H * 0.5}" fill="url(#fade)"/>
   <g font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif">
-    <path d="M0 ${pad} H330 L300 ${pad + 34} L330 ${pad + 68} H0 Z" fill="#ffd54a"/>
-    <text x="${pad - 20}" y="${pad + 46}" font-size="30" font-weight="800" fill="#1e1e1e" letter-spacing="2">LIMITED OFFER</text>
+    <path d="M0 ${pad} H420 L390 ${pad + 34} L420 ${pad + 68} H0 Z" fill="#ffd54a"/>
+    <text x="${pad - 20}" y="${pad + 46}" font-size="30" font-weight="800" fill="#1e1e1e" letter-spacing="2" textLength="320" lengthAdjust="spacingAndGlyphs">LIMITED OFFER</text>
     ${badgeSvg}
     <rect x="${pad}" y="${H - pad - 190 - ls * 0.15}" width="90" height="8" rx="4" fill="#ffd54a"/>
     <text x="${pad}" y="${H - pad - 105}" font-size="${ls}" font-weight="800" fill="#fff">${esc(line)}</text>
