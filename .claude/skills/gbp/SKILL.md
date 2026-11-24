@@ -5,7 +5,9 @@ description: One-prompt GBP posts for a business - "amex81 ke 30 posts", "drs ka
 
 # GBP batch: sheet + Localo from one prompt
 
-Pradeep says a business id (Businesses tab `id`, e.g. `amex`, `amex81`, `drs`) and either a count ("30 posts") or a month ("January"). Default: 30 posts. Do everything below without asking, in order, and report at the end. Stop and ask only where this file says "stop".
+Pradeep says a business id (Businesses tab `id`, e.g. `amex`, `amex81`, `drs`) and either a count ("30 posts") or a month ("January"). Default: next month, sized by the business's plan.
+
+Plans (Businesses tab `plan`, src/plans.js): `3500` = 20 posts a month spread over the whole month, `5000` = 30 (daily), empty = daily. With `--month` the plan is the quota (minus posts that month already has); with `--count` the posts are spaced the same way. Offer posts (`type = offer`) are the business's own offers, on top of the plan. A new business with no keywords yet: run the gbp-research skill first. Do everything below without asking, in order, and report at the end. Stop and ask only where this file says "stop".
 
 Browser: always the **built-in browser** (`mcp__Claude_Browser__*`), never Claude in Chrome. Pradeep signs in to Google and Localo there once; if a sign-in page shows up, stop and ask him to sign in in the browser pane, then continue.
 
@@ -25,7 +27,7 @@ Reads the live sheet (`GBP_SHEET_ID` in `.env`; if missing, write `GBP_SHEET_ID=
 Write `out/<id>/batch/posts.json`: an array, one object per planned date, in date order, each `{ "topic", "title", "text" }`. Rules (same as `buildPrompt` in src/month.js):
 - title + 1 + text between `rules.min_chars` and `rules.max_chars` (aim 750-950). Title under 70 characters.
 - `primary_keyword` in the first sentence, `secondary_keyword` near the end, both exactly as written.
-- Every post a different practical topic (a service, packing tip, route, season from `season`, customer worry, area); name 2-3 areas from `areas`. Never reuse a title or angle from `avoid_titles`.
+- Write for the business's `category` (plan.json): topics a customer of that kind of business cares about (for storage: what can be stored, how long, access, safety, moving between homes; for packers: packing, routes, seasons). Every post a different practical topic (a service, a tip, season from `season`, customer worry, area); name 2-3 areas from `areas`. Never reuse a title or angle from `avoid_titles`.
 - Plain English. No phone numbers, prices, discounts, emojis, hashtags, ALL CAPS, reviews, guarantees, certifications or invented extras. Only the listed services. Transit insurance only in an insurance post, and as optional.
 - End with an invitation to call.
 
