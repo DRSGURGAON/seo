@@ -169,3 +169,21 @@ test('generateBlogs keeps finished blogs when Gemini goes down mid-run', async (
   assert.equal(rows[0].date, '2026-12-02');
   assert.match(rows.stopped, /503/);
 });
+
+test('blogs may not target an area or page the site already has, nor repeat a keyword template', async () => {
+  const { takenTopics, BLOG_ANGLES } = await import('../src/blogs.js');
+  const sw = { ...biz, widget: { city: 'Gurgaon' }, areas: ['Golf Course Road', 'Sohna Road', 'Gurgaon'] };
+  const topics = takenTopics(sw, ['gurgaon/golf-course-road', 'guides/how-to-choose-packers-and-movers', 'furniture', 'packers-and-movers-gurgaon-sector-49', 'about-us']);
+  assert.deepEqual([...topics.keys()].sort(), ['golf course road', 'how to choose packers and movers', 'sector 49', 'sohna road']);
+  const mk = (kw, title = kw) => ({ ...blog('zz'), keyword: kw, title, body: `${kw} ` + blog('zz').body });
+  const p = (b, others = []) => blogProblems(sw, b, others, new Set(), topics).filter(x => /targets|starts like/.test(x));
+  assert.match(p(mk('household storage in golf course road gurgaon')).join(), /golf course road/);
+  assert.match(p(mk('packers in sec 49 gurgaon')).join(), /sector 49/);
+  assert.deepEqual(p(mk('how to store a sofa for 6 months in gurgaon')), []);
+  assert.deepEqual(p(mk('how to choose a storage unit size')), []);
+  assert.match(p(mk('household storage in winter'), [{ keyword: 'household storage in summer' }]).join(), /starts like an earlier blog/);
+  const prompt = buildBlogPrompt(sw, { month: '2026-12', topics, angle: BLOG_ANGLES[2] });
+  assert.match(prompt, /must NOT target an area/);
+  assert.match(prompt, /angle: a printable checklist/);
+  assert.match(prompt, /golf course road/);
+});

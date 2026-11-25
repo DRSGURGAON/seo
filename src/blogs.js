@@ -38,7 +38,36 @@ export function spreadDates(month, count, from) {
 }
 
 // Problems with one article. `others` = earlier blogs (sheet + this batch); `taken` = slugs already used on the site.
-export function blogProblems(biz, b, others = [], taken = new Set()) {
+// Words that say nothing about a page's topic, so "packers-and-movers-gurgaon-sector-49" -> "sector 49".
+const GENERIC = new Set(['packers', 'movers', 'and', 'in', 'the', 'of', 'for', 'near', 'me', 'best', 'services', 'service', 'storage', 'household',
+  'relocation', 'home', 'house', 'office', 'shifting', 'moving', 'packing', 'company', 'index', 'page']);
+const QUESTION = new Set(['how', 'to', 'what', 'why', 'when', 'which', 'can', 'i', 'choose', 'get', 'a', 'it', 'works', 'vs', 'is', 'does', 'do']);
+const SKIP_PAGES =new Set(['', 'blogs', 'blog', 'about us', 'contact us', 'gallery', 'locations', 'guides', 'lp', 'faq', 'privacy policy', 'terms']);
+export const norm = s => ` ${String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\bsec\b/g, 'sector').replace(/\s+/g, ' ').trim()} `;
+
+// Topics the business already ranks with: every existing website page (by its URL) and every area it serves.
+// A blog must not target these, or it competes with the area/service page for the same search (keyword cannibalisation).
+// The city itself (e.g. Gurgaon) is not a topic, blogs may and should name it.
+export function takenTopics(biz, sitePages = []) {
+  const city = norm(biz.widget?.city || '').trim();
+  const out = new Map(); // phrase -> where it comes from
+  for (const p of sitePages) {
+    const full = norm(p.split('/').pop()).trim();
+    let words = full.split(' ').filter(w => w && !GENERIC.has(w) && w !== city);
+    // "how-to-choose-packers-and-movers" would shrink to "how to choose", which forbids every how-to: keep the whole name.
+    if (words.every(w => QUESTION.has(w))) words = full.split(' ');
+    const phrase = words.join(' ');
+    // One-word page names (/furniture/, /pricing/) are too broad to forbid; single-word places come from the areas list.
+    if (!SKIP_PAGES.has(norm(p.split('/').pop()).trim()) && words.length >= 2 && !/^\d+$/.test(phrase)) out.set(phrase, `page /${p}/`);
+  }
+  for (const a of biz.areas || []) {
+    const phrase = norm(a).trim();
+    if (phrase && phrase !== city) out.set(phrase, `area ${a}`);
+  }
+  return out;
+}
+
+export function blogProblems(biz, b, others = [], taken = new Set(), topics = new Map()) {
   const r = { ...BLOG_RULES, ...(biz.blog_rules || {}) }, probs = [];
   const words = wordCount(b.body);
   if (words < r.min_words || words > r.max_words) probs.push(`body is ${words} words, must be ${r.min_words}-${r.max_words}`);
@@ -51,6 +80,13 @@ export function blogProblems(biz, b, others = [], taken = new Set()) {
   else {
     if (!b.title.toLowerCase().includes(kw) && !b.body.toLowerCase().split(/\s+/).slice(0, 120).join(' ').includes(kw)) probs.push(`use the keyword "${b.keyword}" in the title or the first paragraph`);
     if (others.some(o => String(o.keyword || '').toLowerCase().trim() === kw)) probs.push(`keyword "${b.keyword}" already has a blog, choose another`);
+    const target = norm(`${b.keyword} ${b.title}`);
+    const hit = [...topics].find(([phrase]) => target.includes(` ${phrase} `));
+    if (hit) probs.push(`the keyword/title targets "${hit[0]}", which already has its own ${hit[1]}; pick a question or how-to topic that names no area`);
+    // No two blogs built on the same template ("household storage in X", "household storage in Y").
+    const head = norm(kw).trim().split(' ').slice(0, 3).join(' ');
+    if (head.split(' ').length === 3 && others.some(o => norm(o.keyword || '').trim().startsWith(head + ' ') || norm(o.keyword || '').trim() === head))
+      probs.push(`keyword starts like an earlier blog ("${head} ..."), use a different kind of topic`);
   }
   if (!/^##\s/m.test(b.body)) probs.push('use ## subheadings');
   if (PHONE_RE.test(`${b.title} ${b.body}`)) probs.push('must not contain any phone number');
@@ -61,15 +97,26 @@ export function blogProblems(biz, b, others = [], taken = new Set()) {
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-export function buildBlogPrompt(biz, { month, avoid = [], sitePages = [], fix = null }) {
+// One kind of article per blog, rotated, so a month never becomes eight copies of "<service> in <area>".
+export const BLOG_ANGLES = [
+  'what decides the cost (factors only, no prices)', 'a step-by-step how-to guide', 'a printable checklist', 'common mistakes to avoid',
+  'a comparison of two options the customer is choosing between', 'what can and cannot be stored or moved, and how to prepare each item',
+  'a specific life situation (renovation, job transfer, going abroad, small flat, new baby, students, e-commerce sellers)',
+  'questions to ask before choosing a provider', 'season-specific care for goods',
+];
+
+export function buildBlogPrompt(biz, { month, avoid = [], sitePages = [], fix = null, angle = BLOG_ANGLES[0], topics = new Map() }) {
   const r = { ...BLOG_RULES, ...(biz.blog_rules || {}) };
   const when = `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
+  const city = biz.widget?.city || 'Gurgaon';
   return [
-    `Write ONE blog article for the website of "${biz.name}", a ${biz.category || 'packers and movers'} business in ${biz.widget?.city || 'Gurgaon'} (established ${biz.established}).`,
+    `Write ONE blog article for the website of "${biz.name}", a ${biz.category || 'packers and movers'} business in ${city} (established ${biz.established}).`,
     `Services: ${biz.services.join(', ')}. Areas served: ${biz.areas.join(', ')}. Main keyword of the business: "${biz.primary_keyword}".`,
     `It is published in ${when}, in ${seasonFor(month)}. Any weather or seasonal angle must match that season.`,
     '',
-    'Pick ONE long-tail search keyword a real customer in this city would type (a service + area, a cost question, a how-to, a checklist, a comparison), and write the article for that search.',
+    `The website already has a separate page for every area and service, so this blog must NOT target an area. Pick ONE informational long-tail keyword a real customer in ${city} would type: a question, a how-to, a cost factor, a checklist or a comparison, e.g. "how to store a sofa for 6 months" or "what affects household storage cost in ${city}". The keyword may contain "${city}" but no locality, sector or neighbourhood name.`,
+    `This article's angle: ${angle}.`,
+    topics.size ? `Keywords and titles must not contain any of these names (they have their own pages): ${[...topics.keys()].slice(0, 80).join(', ')}. You may mention areas inside the body.` : '',
     'Rules:',
     `- ${r.min_words}-${r.max_words} words of body. Markdown only: ## and ### subheadings, short paragraphs, "- " bullet lists. No links, no images, no tables, no H1.`,
     '- Use the keyword in the title and in the first paragraph, naturally. Title under 70 characters.',
@@ -90,6 +137,7 @@ export function buildBlogPrompt(biz, { month, avoid = [], sitePages = [], fix = 
 // generate(prompt) -> {keyword,slug,title,description,body}. Injected so tests run without an API.
 export async function generateBlogs({ biz, existing = [], dates, photos = [], sitePages = [], generate, triesPerBlog = 3, log = () => {} }) {
   const taken = new Set(sitePages.map(s => s.split('/').pop()));
+  const topics = takenTopics(biz, sitePages);
   const accepted = [];
   let stopped = '';
   for (const date of dates) {
@@ -99,11 +147,12 @@ export async function generateBlogs({ biz, existing = [], dates, photos = [], si
       const others = [...existing, ...accepted];
       let b;
       // Gemini still down after all retries/fallbacks: keep the blogs written so far instead of losing them.
-      try { b = await generate(buildBlogPrompt(biz, { month: date.slice(0, 7), avoid: others.map(o => `${o.title} (keyword: ${o.keyword})`).slice(-60), sitePages, fix })); } catch (e) {
+      try { b = await generate(buildBlogPrompt(biz, { month: date.slice(0, 7), avoid: others.map(o => `${o.title} (keyword: ${o.keyword})`).slice(-60), sitePages, fix, topics,
+        angle: BLOG_ANGLES[(others.length + t) % BLOG_ANGLES.length] })); } catch (e) {
         stopped = e.message; log(`  ${date}: stopped, ${e.message}`); break;
       }
       const blog = { ...b, slug: slugify(b.slug || b.title || ''), title: String(b.title || '').trim(), description: String(b.description || '').trim(), body: String(b.body || '').trim(), keyword: String(b.keyword || '').trim() };
-      const problems = blogProblems(biz, blog, others, taken);
+      const problems = blogProblems(biz, blog, others, taken, topics);
       if (problems.length) { fix = { title: blog.title, problems }; log(`  ${date}: attempt ${t + 1} rejected (${problems.join('; ')})`); continue; }
       ok = blog;
     }
